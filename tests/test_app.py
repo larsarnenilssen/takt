@@ -16,6 +16,8 @@ import http.server
 import json
 import os
 import re
+import shutil
+import tempfile
 import threading
 import unittest
 from urllib.parse import parse_qs, urlparse
@@ -409,6 +411,44 @@ class TaktTest(unittest.TestCase):
         self.assertEqual((sh['start'], sh['end'], sh['label']), ('08:00', '12:00', 'Kurs'))
         self.page.click('#toast [data-undo]')
         self.assertEqual(self.js("() => shiftFor('2026-10-05').label"), 'Dagvakt')
+
+    MINGAT_ICS = "\r\n".join([
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Visma//MinGat//NO',
+        'BEGIN:VEVENT', 'DTSTART;TZID=Europe/Oslo:20261005T073000', 'DTEND;TZID=Europe/Oslo:20261005T150000', 'SUMMARY:D1 07:30-15:00 Dagvakt', 'DESCRIPTION:Dagvakt\\, Avdeling 2', 'END:VEVENT',
+        'BEGIN:VEVENT', 'DTSTART;TZID=Europe/Oslo:20261006T073000', 'DTEND;TZID=Europe/Oslo:20261006T150000', 'SUMMARY:D1 07:30-15:0', ' 0 Dagvakt', 'END:VEVENT',
+        'BEGIN:VEVENT', 'DTSTART;TZID=Europe/Oslo:20261007T080000', 'DTEND;TZID=Europe/Oslo:20261007T150000', 'SUMMARY:D1 08:00-15:00 Dagvakt', 'END:VEVENT',
+        'BEGIN:VEVENT', 'DTSTART:20261008T123000Z', 'DTEND:20261008T200000Z', 'SUMMARY:A14 Aftenvakt', 'END:VEVENT',
+        'BEGIN:VEVENT', 'DTSTART;TZID=Europe/Oslo:20261009T211500', 'DTEND;TZID=Europe/Oslo:20261010T073000', 'SUMMARY:N 21:15-07:30', 'END:VEVENT',
+        'BEGIN:VEVENT', 'DTSTART;VALUE=DATE:20261011', 'DTEND;VALUE=DATE:20261012', 'SUMMARY:F1 Fri', 'END:VEVENT',
+        'BEGIN:VEVENT', 'DTSTART;TZID=Europe/Oslo:20261012T073000', 'DTEND;TZID=Europe/Oslo:20261012T150000', 'SUMMARY:D1', 'STATUS:CANCELLED', 'END:VEVENT',
+        'BEGIN:VEVENT', 'DTSTART;TZID=Europe/Oslo:20261010T120000', 'DTEND;TZID=Europe/Oslo:20261010T130000', 'SUMMARY:12:00-13:00', 'END:VEVENT',
+        'END:VCALENDAR', ''])
+
+    def test_import_mingat_ics(self):
+        self.open()
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        path = os.path.join(tmp, 'mingat.ics')
+        with open(path, 'w', encoding='utf-8', newline='') as f:
+            f.write(self.MINGAT_ICS)
+        self.page.click('#tab-more')
+        self.page.click('[data-nav="rota"]')
+        with self.page.expect_file_chooser() as fc:
+            self.page.click('[data-nav="ics"]')
+        fc.value.set_files(path)
+        self.page.wait_for_selector('.rv-g')
+        text = self.sheet().inner_text()
+        self.assertIn('1 dag har andre tider enn koden', text)
+        self.assertEqual(self.page.locator('.rv-g[data-g="D1"] .tag').count(), 1, 'D1 er ny')
+        self.assertIn('07:30–15:00', self.page.locator('.rv-g[data-g="D1"]').inner_text())
+        self.page.click('.sh-foot [data-save]')
+        self.page.wait_for_function("() => state.rota.shifts['2026-10-05'] === 'D1'")
+        R = self.js('() => state.rota')
+        self.assertEqual(R['codes']['D1'], {'label': 'Dagvakt', 'kind': 'work', 'start': '07:30', 'end': '15:00'})
+        self.assertEqual([R['shifts'].get(d) for d in ['2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12']],
+                         ['D1', 'D1', 'A14', 'N', None, 'F1', 'D'])
+        self.assertEqual(R['custom']['2026-10-07'], {'start': '08:00', 'end': '15:00', 'label': 'Dagvakt'})
+        self.assertNotIn('2026-10-06', R['custom'])
 
     def test_rename_code_updates_days(self):
         self.open()

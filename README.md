@@ -11,7 +11,7 @@ inn, lagres på telefonen din. Andre som åpner samme adresse, får sin egen, to
 
 - **Vakt:** dagens vakt, uken og når du er borte hjemmefra. Trykk på vakten for å endre
   den for én dag: en annen kode, ingen vakt eller egne tider (byttet vakt, kurs).
-- **Turnus:** skriv den inn uke for uke, eller importer kalenderplanen fra GAT som PDF (leses på telefonen, også skannet).
+- **Turnus:** importer kalenderfilen fra MinGat, kalenderplanen fra GAT som PDF (leses på telefonen, også skannet), eller skriv den inn uke for uke.
   Før noe lagres, viser Takt hvilke koder den fant, med bilder fra planen, og rutene som
   var vanskelige å lese. Nye koder får tider i samme kontroll.
 - **Reise:** reiser med Skyss til og fra vakten, med gange til og fra holdeplassene. Til
@@ -57,6 +57,11 @@ inngangen og trykk **Bruk der jeg er nå**), minutter før og etter vakten, impo
 Har du brukt Takt før, velger du **Hent fra Google Drive** eller **Hent fra fil** i første steg.
 
 ## 2. Turnus
+
+**Mer › Turnus › Importer fra MinGat.** I MinGat: **Min kalender**, åpne innstillingene og trykk **Eksporter**. Filen (.ics)
+havner i Nedlastinger på telefonen; velg den i Takt. Vaktkoden leses fra tittelen på hver vakt, og tidene som er vanligst for
+en kode, blir kodens tider. Dager med andre tider får egne tider. Filen er et øyeblikksbilde: eksporter og importer på nytt
+når turnusen endres. Dager du har endret selv, beholdes om du vil.
 
 **Mer › Turnus › Skriv inn turnus.** Et rutenett med én rad per uke, som arket fra turnuskontoret. Velg en kode
 og trykk på dagene, eller dra vannrett over en uke. **Uker i runden** og **Gjenta ut perioden** fyller resten av perioden

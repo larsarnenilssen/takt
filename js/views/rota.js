@@ -76,13 +76,14 @@ function openRotaSheet(back) {
   const src = state.rota.source;
   openSheet(h`${sheetHead(T.rota.title, !!back)}<div class="sh-body">
     ${src ? h`<p class="hint">${T.rota.sourceInfo(fmtDateShort(src.from), fmtDateShort(src.to), src.importedAt ? fmtStamp(src.importedAt) : '')}</p>` : hint(T.rota.intro)}
-    <div class="rows">${navRow('manual', T.rota.manual, T.rota.manualMeta)}${navRow('pdf', T.rota.importPdf, T.rota.importPdfMeta)}${navRow('file', T.rota.importFile, T.rota.importFileMeta)}
+    <div class="rows">${navRow('ics', T.rota.importIcs, T.rota.importIcsMeta)}${navRow('manual', T.rota.manual, T.rota.manualMeta)}${navRow('pdf', T.rota.importPdf, T.rota.importPdfMeta)}${navRow('file', T.rota.importFile, T.rota.importFileMeta)}
       ${navRow('codes', T.rota.codesTitle, T.rota.codeCount(codeList().length))}${navRow('export', T.rota.exportFile, T.rota.exportMeta)}</div>
   </div>`, (sheet, q) => {
     bindBack(sheet, back);
     const again = () => openRotaSheet(back);
     q('[data-nav="manual"]').addEventListener('click', () => openRotaGridSheet(again));
     q('[data-nav="pdf"]').addEventListener('click', () => importPdf(again));
+    q('[data-nav="ics"]').addEventListener('click', () => importIcs(again));
     q('[data-nav="file"]').addEventListener('click', async () => {
       const text = await pickFile('.json,.txt,application/json,text/plain');
       if (text == null) return;
@@ -95,6 +96,14 @@ function openRotaSheet(back) {
     q('[data-nav="codes"]').addEventListener('click', () => openCodesSheet(again));
     q('[data-nav="export"]').addEventListener('click', () => downloadJson(T.rota.exportName(todayISO()), rotaFile()));
   }, () => openRotaSheet(back));
+}
+
+/* ---------- import fra MinGat (kalenderfil) ---------- */
+async function importIcs(back) {
+  const text = await pickFile('.ics,text/calendar');
+  if (text == null) return;
+  try { openReviewSheet(icsProposal(parseIcs(text)), back); }
+  catch (e) { if (e instanceof UserError) toast(e.message); else throw e; }
 }
 
 /* ---------- import fra PDF ----------
@@ -155,8 +164,8 @@ function openReviewSheet(p, back) {
   const thumbs = c => (p.cells ? groups[c].filter(d => p.cells[d]).slice(0, 10) : []).map(d => h`<img src="${p.cells[d].thumb}" alt="" class="${p.cells[d].sure ? '' : 'unsure'}">`);
   const groupRow = c => h`<div class="rv-g${isNew(c) ? ' new' : ''}" data-g="${c}">
     <div class="rv-top"><input type="text" class="rv-code" value="${c}" data-rename="${c}" maxlength="12" aria-label="${T.rota.code}" autocapitalize="characters" placeholder="?">
-      <span class="grow m">${T.rota.days(groups[c].length)}${known[c] ? ' · ' + shiftText({ ...known[c], code: '' }).replace(/^ · /, '') : ''}</span>
-      ${isNew(c) ? h`<span class="tag">${T.rota.newTag}</span>` : ''}</div>
+      <span class="grow m">${T.rota.days(groups[c].length)}${known[c] || p.codes[c] ? ' · ' + shiftText({ ...(known[c] || p.codes[c]), code: '' }).replace(/^ · /, '') : ''}</span>
+      ${c && !known[c] ? h`<span class="tag">${T.rota.newTag}</span>` : ''}</div>
     ${p.cells ? h`<div class="thumbs">${thumbs(c)}${groups[c].length > 10 ? h`<span class="m">+${groups[c].length - 10}</span>` : ''}</div>` : ''}
     ${isNew(c) ? h`<div class="rv-def">${segRow('data-dkind="' + c + '" data-k', kindPairs(), k => k === defs[c].kind)}
       <div class="fields three"${defs[c].kind === 'off' ? raw(' data-off') : ''}><label class="field"><span>${T.common.from}</span><input type="time" data-ds="${c}" value="${defs[c].start}"></label>
@@ -165,6 +174,7 @@ function openReviewSheet(p, back) {
 
   openSheet(h`${sheetHead(T.rota.reviewTitle, !!back)}<div class="sh-body">
     <p class="lead">${T.rota.found(Object.keys(p.entries).length, fmtDateShort(p.from), fmtDateShort(p.to))}</p>
+    ${p.custom && Object.keys(p.custom).length ? hint(T.rota.customFound(Object.keys(p.custom).length)) : ''}
     ${unsure.length ? h`<section class="grp attention"><h3>${T.rota.checkThese(unsure.length)}</h3>${hint(T.rota.checkHint)}
       ${unsure.map(d => h`<div class="rv-u"><span class="grow">${fmtDateShort(d)} <span class="m">${wdShort(isoWd(d))}</span></span>
         <img src="${p.cells[d].thumb}" alt="${T.rota.imgAlt}"><input type="text" class="rv-code" data-day="${d}" value="${p.entries[d]}" maxlength="12" aria-label="${T.rota.codeFor(fmtDateShort(d))}" autocapitalize="characters"></div>`)}</section>` : ''}
@@ -203,7 +213,9 @@ function openReviewSheet(p, back) {
         newCodes[c] = def;
       }
       from = q('#rv-from').value || p.from;
-      const n = applyRota(entries, newCodes, { from, to: p.to, keepManual: keep });
+      const custom = {};
+      for (const [d, cu] of Object.entries(p.custom || {})) if (entries[d] === p.entries[d]) custom[d] = cu;   // ikke når koden er rettet i kontrollen
+      const n = applyRota(entries, newCodes, { from, to: p.to, keepManual: keep, custom });
       return T.rota.published(n);
     }, () => { closeSheet(); goTo(from > todayISO() ? from : todayISO()); }));
   });

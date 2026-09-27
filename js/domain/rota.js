@@ -85,8 +85,9 @@ function deleteCode(code) {
 
 /* ---------- import ----------
    entries: { dato: kode }. Turnusen fra og med from til og med to erstattes.
-   Endringer for hånd i perioden beholdes når keepManual er satt, ellers fjernes de. */
-function applyRota(entries, newCodes, { from, to, keepManual }) {
+   Endringer for hånd i perioden beholdes når keepManual er satt, ellers fjernes de.
+   custom: dager med andre tider enn koden (fra en kalenderfil), som legges inn som egne tider. */
+function applyRota(entries, newCodes, { from, to, keepManual, custom = {} }) {
   const R = state.rota;
   for (const [c, def] of Object.entries(newCodes || {})) R.codes[c] = cleanCode(def);
   const inRange = d => d >= from && d <= to;
@@ -94,6 +95,7 @@ function applyRota(entries, newCodes, { from, to, keepManual }) {
   if (!keepManual) for (const m of [R.overrides, R.custom]) for (const d of Object.keys(m)) if (inRange(d)) delete m[d];
   let n = 0;
   for (const [d, c] of Object.entries(entries)) if (inRange(d) && c) { R.shifts[d] = c; n++; }
+  for (const [d, cu] of Object.entries(custom)) if (inRange(d) && entries[d] && !(keepManual && isManual(d))) R.custom[d] = { start: cu.start, end: cu.end, label: str(cu.label, 60) };
   R.source = { from, to, importedAt: new Date().toISOString() };
   return n;
 }

@@ -135,7 +135,7 @@ const T = {
   cal: { prev: 'Forrige måned', next: 'Neste måned', today: 'I dag', wk: 'u.', hint: 'Fargen viser vakten: dag, kveld, natt eller fri. Prikk: notat, gjøremål eller avtale.' },
 
   rota: {
-    title: 'Turnus', intro: 'Skriv inn turnusen uke for uke, eller importer den som PDF. Ved import viser Takt hva den fant, før noe lagres.',
+    title: 'Turnus', intro: 'Importer turnusen fra MinGat eller som PDF, eller skriv den inn uke for uke. Ved import viser Takt hva den fant, før noe lagres.',
     sourceInfo: (a, b, when) => 'Turnus fra ' + a + ' til ' + b + (when ? ', importert ' + when : '') + '.',
     manual: 'Skriv inn turnus', manualMeta: 'Uke for uke, med koder du velger',
     manualIntro: 'Velg en kode og trykk på dagene, eller dra over en uke. Koden «Tom» fjerner vakten.',
@@ -148,6 +148,9 @@ const T = {
     summary: (w, n) => plural(w, 'uke', 'uker') + ' · ' + plural(n, 'vakt', 'vakter'),
     manualSave: 'Lagre turnus', badPeriod: 'Velg en gyldig periode.',
     manualKeepHint: 'Rutenettet viser vaktene med endringene du har gjort for hånd. Dager med egne tider beholdes til du gir dem en kode her.',
+    importIcs: 'Importer fra MinGat', importIcsMeta: 'Kalenderfilen (.ics) fra Min kalender › Eksporter',
+    icsEmpty: 'Fant ingen vakter med kode i kalenderfilen.',
+    customFound: n => plural(n, 'dag', 'dager') + ' har andre tider enn koden og får egne tider.',
     importPdf: 'Importer turnus (PDF)', importPdfMeta: 'Kalenderplan fra GAT, også skannet',
     importFile: 'Importer turnusfil', importFileMeta: 'Fra Takt eller tekst',
     exportFile: 'Del turnusfil', exportMeta: 'Til kolleger', exportName: d => 'takt-turnus-' + d + '.json',
@@ -286,6 +289,6 @@ const T = {
     haveData: 'Har du brukt Takt før?', fromDrive: 'Hent fra Google Drive', fromFile: 'Hent fra fil', fromGithub: 'GitHub', next: 'Neste', later: 'Senere',
     backupTitle: 'Backup', backupHint: 'Slå på backup til Google Drive, så får du alt tilbake om du mister telefonen. Det kan også gjøres senere under Mer › Backup.',
     placesTitle: 'Hjem og jobb', placesHint: 'Med hjem og arbeidssted finner Takt reisene med Skyss, med gange til og fra holdeplassene.',
-    rotaTitle: 'Turnus', rotaHint: 'Importer turnusen som PDF, eller skriv den inn uke for uke. Det kan også gjøres senere under Mer › Turnus.',
+    rotaTitle: 'Turnus', rotaHint: 'Eksporter kalenderfilen fra MinGat (Min kalender › Eksporter) og importer den her, bruk PDF-en, eller skriv turnusen inn uke for uke. Det kan også gjøres senere under Mer › Turnus.',
   },
 };
