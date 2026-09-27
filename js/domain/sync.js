@@ -70,7 +70,8 @@ function shareFile() {
 
 /* Én jobb om gangen. Feil lagres og vises under Backup og deling. */
 async function runSync(job) {
-  if (!syncOn() || sync.busy) return false;
+  if (!syncOn()) return false;
+  if (sync.busy) { setTimeout(scheduleSync, 5000); return false; }   // prøver igjen når forrige jobb er ferdig
   sync.busy = true;
   let ok = false;
   try { await job(); sync.cfg.lastError = ''; ok = true; }

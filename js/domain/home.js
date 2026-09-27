@@ -43,11 +43,13 @@ const kidsWordOf = () => dogn.data.kidsWord || T.home.kids;
 const joinNames = names => names.length > 1 ? names.slice(0, -1).join(', ') + T.home.and + names[names.length - 1] : names[0] || '';
 
 /* Hvem sover akkurat nå: { barn: siden }. En søvn uten slutt pågår: en lur i dag,
-   eller natten som startet i går kveld (eller i kveld). */
+   eller natten som startet i går kveld (fram til midt på dagen, i tilfelle
+   «våknet» aldri ble logget), eller i kveld. */
+const NIGHT_UNTIL = 12 * 60;
 function sleepingNow(date, now) {
   const out = {};
   const y = dogn.data.days[addDays(date, -1)], t = dogn.data.days[date];
-  if (y) for (const e of y.sleep) if (e.night && !e.end) out[e.kid] = e.start;
+  if (y && now < NIGHT_UNTIL) for (const e of y.sleep) if (e.night && !e.end) out[e.kid] = e.start;
   if (t) for (const e of t.sleep) if (!e.end && toMin(e.start) <= now) out[e.kid] = e.start;
   return out;
 }

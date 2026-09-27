@@ -4,7 +4,7 @@
    Legges det til en fil i appen, må den også stå i APP_FILES.
    VENDOR_FILES er store biblioteker for PDF-import. De lagres første gang
    de brukes, i et eget lager som bare byttes når VENDOR_VERSION endres. */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 const APP_FILES = [
   './', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png',
   './styles/tokens.css', './styles/app.css',
