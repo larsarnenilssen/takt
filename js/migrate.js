@@ -12,7 +12,7 @@
      rota: { codes: { KODE: { label, kind, start, end } }, shifts: { dato: KODE } (fra import),
              overrides: { dato: KODE eller '' }, custom: { dato: { start, end, label } }, source },
      days: { dato: { from: stedId, to: stedId, pick: { to | home: { leave, arrive, sig } } } },
-     items: [{ id, kind, date, time, title, note, done, shared, updated }],
+     items: [{ id, kind, date, time, end, title, note, done, shared, cal, updated }],
      settings: { theme, textSize, dognName }, meta: { created, setupDone, lastExport } } */
 const DATA_VERSION = 1;
 const SHIFT_KINDS = ['work', 'night', 'off'];
@@ -64,8 +64,8 @@ function cleanItem(x) {
   if (!title) return null;
   return {
     id: str(x.id, 20) || uid(), kind: ITEM_KINDS.includes(x.kind) ? x.kind : 'todo',
-    date: isDate(x.date) ? x.date : '', time: isTime(x.time) ? x.time : '',
-    title, note: str(x.note, 2000), done: !!x.done, shared: !!x.shared,
+    date: isDate(x.date) ? x.date : '', time: isTime(x.time) ? x.time : '', end: isTime(x.end) ? x.end : '',
+    title, note: str(x.note, 2000), done: !!x.done, shared: !!x.shared, cal: x.cal !== false,
     updated: typeof x.updated === 'string' && !isNaN(Date.parse(x.updated)) ? x.updated : new Date().toISOString(),
   };
 }

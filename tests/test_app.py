@@ -138,7 +138,9 @@ class FakeGoogle:
     def auth(self, route):
         q = parse_qs(urlparse(route.request.url).query)
         self.logins += 1
-        frag = 'access_token=tok%d&token_type=Bearer&expires_in=3599&state=%s' % (self.logins, q['state'][0])
+        from urllib.parse import quote
+        self.scopes = q['scope'][0]
+        frag = 'access_token=tok%d&token_type=Bearer&expires_in=3599&state=%s&scope=%s' % (self.logins, q['state'][0], quote(q['scope'][0]))
         route.fulfill(status=302, headers={'Location': q['redirect_uri'][0] + '#' + frag})
 
     def api(self, route):
@@ -146,6 +148,8 @@ class FakeGoogle:
         u = urlparse(req.url)
         if not (req.headers.get('authorization') or '').startswith('Bearer tok'):
             return route.fulfill(status=401, body='{}')
+        if '/calendar/v3/' in u.path:
+            return self.calendar(route, req, u)
         m = re.search(r'/files/([^/?]+)', u.path)
         if req.method == 'GET' and not m:
             files = [{'id': k, 'modifiedTime': v['modified']} for k, v in self.files.items()]
@@ -167,6 +171,47 @@ class FakeGoogle:
 
     def only(self):
         return json.loads(next(iter(self.files.values()))['content'])
+
+    # Google-kalenderen: kalendere appen har laget, og hendelsene i dem
+    calendars = None
+
+    def calendar(self, route, req, u):
+        if self.calendars is None:
+            self.calendars, self.cal_calls = {}, []
+        parts = u.path.split('/calendar/v3/calendars')[1].strip('/').split('/')
+        self.cal_calls.append((req.method, u.path))
+        ok = lambda body=None: route.fulfill(status=200, content_type='application/json', body=json.dumps(body or {}))
+        if parts == [''] and req.method == 'POST':
+            cid = 'cal%d' % (len(self.calendars) + 1)
+            self.calendars[cid] = {'summary': json.loads(req.post_data)['summary'], 'events': {}}
+            return ok({'id': cid})
+        from urllib.parse import unquote
+        cid = unquote(parts[0])
+        if cid not in self.calendars:
+            return route.fulfill(status=404, body='{}')
+        events = self.calendars[cid]['events']
+        if len(parts) == 1 and req.method == 'DELETE':
+            del self.calendars[cid]
+            return ok()
+        if len(parts) == 2 and req.method == 'POST':
+            ev = json.loads(req.post_data)
+            events[ev['id']] = ev
+            return ok(ev)
+        eid = parts[2]
+        if req.method == 'PUT':
+            if eid not in events:
+                return route.fulfill(status=404, body='{}')
+            events[eid] = json.loads(req.post_data)
+            return ok(events[eid])
+        if req.method == 'DELETE':
+            if eid not in events:
+                return route.fulfill(status=410, body='{}')
+            del events[eid]
+            return route.fulfill(status=204, body='')
+        return route.fulfill(status=400, body='{}')
+
+    def events(self):
+        return next(iter(self.calendars.values()))['events']
 
 
 # En testbruker etter oppsett: steder, vaktkoder, to uker med vakter og favoritter.
@@ -258,8 +303,11 @@ class TaktTest(unittest.TestCase):
     def drive_connect(self, pg, code, again=None):
         pg.fill('#dr-c', code)
         pg.fill('#dr-c2', again or code)
-        pg.click('.sh-foot [data-save]')
-        pg.wait_for_load_state()
+        if len(code) < 6:
+            pg.click('.sh-foot [data-save]')
+            return
+        with pg.expect_navigation(url=re.compile(r'/$')):
+            pg.click('.sh-foot [data-save]')
         pg.wait_for_function(READY)
 
     def _entur(self, route):
@@ -565,7 +613,7 @@ class TaktTest(unittest.TestCase):
 
     def test_drive_asks_before_replacing_data(self):
         self.open()
-        self.js("() => { drive.cfg = { on: true, code: 'hemmelig1', salt: 'AAAAAAAAAAAAAAAAAAAAAA==', token: 'tok9', exp: Date.now() + 3e6, fileId: '', lastBackup: '', lastError: '', dirty: true, pending: false }; }")
+        self.js("() => { drive.cfg = { on: true, code: 'hemmelig1', salt: 'AAAAAAAAAAAAAAAAAAAAAA==', fileId: '', lastBackup: '', lastError: '', dirty: true, pending: false }; google.cfg = { token: 'tok9', exp: Date.now() + 3e6, scopes: [GOOGLE.SCOPES.drive], lastError: '' }; }")
         self.js('() => driveBackup()')
         self.page.wait_for_function('() => !!drive.cfg.lastBackup')
         self.js("() => commit('', () => { state.profile.name = 'Endret'; })")
@@ -576,10 +624,10 @@ class TaktTest(unittest.TestCase):
 
     def test_drive_login_reminder(self):
         self.open()
-        self.js("() => { drive.cfg = { on: true, code: 'hemmelig1', salt: 'AAAAAAAAAAAAAAAAAAAAAA==', token: '', exp: 0, fileId: '', lastBackup: '2026-09-20T10:00:00Z', lastError: '', dirty: true, pending: false }; saveDrive(); render(); }")
+        self.js("() => { drive.cfg = { on: true, code: 'hemmelig1', salt: 'AAAAAAAAAAAAAAAAAAAAAA==', fileId: '', lastBackup: '2026-09-20T10:00:00Z', lastError: '', dirty: true, pending: false }; saveDrive(); render(); }")
         self.assertIn('venter', self.page.inner_text('.card.notice'))
-        self.page.click('.card.notice [data-act="drive-login"]')
-        self.page.wait_for_load_state()
+        with self.page.expect_navigation(url=re.compile(r'/$')):
+            self.page.click('.card.notice [data-act="drive-login"]')
         self.page.wait_for_function(READY)
         self.page.wait_for_function('() => !drive.cfg.dirty')
         self.assertEqual(self.page.locator('.card.notice').count(), 0)
@@ -594,6 +642,80 @@ class TaktTest(unittest.TestCase):
         self.page.wait_for_function('() => !!window.__shared')
         self.assertEqual(self.js('() => window.__shared'), 'takt-backup-2026-10-05.json')
         self.assertEqual(self.js('() => state.meta.lastExport'), '2026-10-05')
+        self.js('() => { closeSheet(); render(); }')
+        self.assertEqual(self.page.locator('.card.notice').count(), 0)
+
+
+    # ---------- vaktene i kalenderen ----------
+    def test_calendar_sync_after_explained_warning(self):
+        self.open()
+        self.page.click('#tab-more')
+        self.page.click('[data-nav="calendar"]')
+        self.page.click('[data-google]')
+        text = self.sheet().inner_text()
+        self.assertIn('ikke bekreftet denne appen', text)
+        self.assertIn('Avansert', text)
+        self.assertIn('Kalenderfil', text)
+        with self.page.expect_navigation(url=re.compile(r'/$')):
+            self.page.click('#sheet-root [data-google-go]')
+        self.page.wait_for_function(READY)
+        self.page.wait_for_function('() => !!cal.cfg.lastSync')
+        self.assertIn('calendar.app.created', self.google.scopes)
+        ev = self.google.events()
+        self.assertEqual(len(ev), 9, 'bare vakter, ikke fridager')
+        self.assertEqual(ev['tks20261005']['summary'], 'D · Dagvakt')
+        night = ev['tks20261008']
+        self.assertEqual((night['start']['dateTime'], night['end']['dateTime']), ('2026-10-08T21:15:00', '2026-10-09T07:30:00'))
+        self.assertEqual(night['start']['timeZone'], 'Europe/Oslo')
+        # Avtaler: med i kalenderen som standard, men kan holdes utenfor
+        calls = len(self.google.cal_calls)
+        self.assertIn('Oppdatert', self.sheet().inner_text(), 'status vises etter innlogging')
+        self.js('() => closeSheet()')
+        self.page.wait_for_timeout(300)
+        self.page.click('#tab-add')
+        self.page.click('[data-kind="appt"]')
+        self.assertEqual(self.page.get_attribute('[data-cal]', 'aria-checked'), 'true')
+        self.page.fill('#it-t', 'Tannlege')
+        self.page.fill('#it-h', '12:00')
+        self.page.click('.sh-foot [data-save]')
+        self.js("() => commit('', () => saveItem({ kind: 'appt', title: 'Privat', date: '2026-10-06', time: '09:00', cal: false }))")
+        # Vakten byttes for hånd: gammel vakt fjernes, bare endringene sendes
+        self.js("() => commit('', () => setDayCode('2026-10-05', ''))")
+        self.js('() => calSync()')
+        self.page.wait_for_function("() => !cal.cfg.dirty && !cal.busy")
+        ev = self.google.events()
+        titles = [e['summary'] for e in ev.values()]
+        self.assertIn('Tannlege', titles)
+        self.assertNotIn('Privat', titles)
+        self.assertNotIn('tks20261005', ev)
+        self.assertEqual(len(self.google.cal_calls) - calls, 2, 'én ny avtale og én slettet vakt')
+
+    def test_calendar_file(self):
+        self.page.add_init_script("navigator.canShare = () => true; navigator.share = async d => { window.__ics = await d.files[0].text(); };")
+        self.open()
+        self.js("() => commit('', () => saveItem({ kind: 'appt', title: 'Kurs, del 1', date: '2026-10-07', time: '', note: 'Ta med; bok' }))")
+        self.js('() => shareCalendarFile()')
+        self.page.wait_for_function('() => !!window.__ics')
+        ics = self.js('() => window.__ics')
+        self.assertEqual(ics.count('BEGIN:VEVENT'), 10)
+        self.assertIn('DTSTART:20261008T191500Z', ics)
+        self.assertIn('DTSTART;VALUE=DATE:20261007', ics)
+        self.assertIn('SUMMARY:Kurs\\, del 1', ics)
+        self.assertTrue(all(len(line) <= 75 for line in ics.split('\r\n')))
+
+    # ---------- GitHub: varsel når nøkkelen slutter å virke ----------
+    def test_github_key_warnings(self):
+        self.open()
+        self.js("() => { sync.cfg = { owner: 'test', repo: 'data', token: 'x', expires: '2026-10-12', backup: true, share: false, dogn: false, lastPush: '', lastShare: '', lastPull: '', lastError: '', dirty: false, shareDirty: false }; render(); }")
+        self.assertIn('utløper 12. okt. (om 7 dager)', self.page.inner_text('.card.notice'))
+        self.js("() => { sync.cfg.lastError = T.sync.errors[401]; render(); }")
+        self.assertIn('Nøkkelen er ugyldig eller utløpt', self.page.inner_text('.card.notice'))
+        self.page.click('.card.notice [data-act="github"]')
+        self.page.fill('#sy-t', 'github_pat_ny')
+        self.page.fill('#sy-x', '2027-10-05')
+        self.page.click('[data-key]')
+        self.page.wait_for_function("() => sync.cfg.token === 'github_pat_ny' && !sync.cfg.lastError")
+        self.assertEqual(self.js('() => sync.cfg.expires'), '2027-10-05')
         self.js('() => { closeSheet(); render(); }')
         self.assertEqual(self.page.locator('.card.notice').count(), 0)
 

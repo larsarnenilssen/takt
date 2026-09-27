@@ -25,6 +25,8 @@ inn, lagres på telefonen din. Andre som åpner samme adresse, får sin egen, to
 - **Notater og gjøremål:** gjøremål, avtaler, notater og ting som skal kjøpes. Punkter
   merket «delt» vises i Døgn, og handling havner på handlelisten der.
 - **Måned:** turnusen i kalender, med ukenummer.
+- **Kalender** (valgfritt): vaktene, og avtaler som er merket for det, i en egen kalender i Google-kalenderen,
+  eller som kalenderfil (.ics).
 
 ## Filer
 
@@ -88,6 +90,17 @@ Alt lagres på telefonen. Under **Mer › Backup** velger hver bruker selv hvord
 
 Se også [personvern.html](personvern.html).
 
+## 3b. Vaktene i kalenderen
+
+**Mer › Kalender.** To valg:
+
+- **Google-kalender:** Takt lager en egen kalender, «Takt – vakter», og holder den lik turnusen: én hendelse per
+  vakt med vaktens lengde (ikke fridager), og avtaler fra Takt som er merket **Legg i kalenderen** (standard).
+  Det går én vei: endringer gjøres i Takt. Takt ser bare kalendere den selv har laget. Før innloggingen forklarer
+  Takt at Google kan vise «Google har ikke bekreftet denne appen», hvorfor, og hvilke valg brukeren har.
+- **Kalenderfil:** En .ics-fil med det samme, fra to uker tilbake og ett år fram, til å åpne i kalenderappen eller
+  importere på calendar.google.com. Den oppdateres ikke av seg selv.
+
 ## 4. Reise
 
 **Mer › Steder og reise.** Her står hjem, arbeidssted og andre steder, minutter før og etter vakten,
@@ -114,6 +127,10 @@ Takt tar da backup (høyst én gang i timen), sender turnus, fravær og delte pu
 dagen hjemme hvert femte minutt mens appen er åpen. Hvert valg kan slås av. Nøkkelen lagres bare på
 telefonen. Merk: Den som eier repoet, kan lese alle filene i det, også backupen.
 
+Fine-grained-nøkler utløper. Skriv inn utløpsdatoen når du kobler til (den står på GitHub), så varsler Takt
+på forsiden to uker før. Slutter GitHub å virke, vises det også på forsiden. En ny nøkkel limes inn under
+**Tilgangsnøkkel** i samme meny; resten beholdes.
+
 ## For den som legger ut appen: Google Drive
 
 Backup til Google Drive krever at appen er registrert hos Google (en klient-ID). Registreringen
@@ -121,11 +138,14 @@ gjøres én gang av den som eier nettadressen, er gratis, og gir ingen tilgang t
 Uten klient-ID vises ikke valget. Skjermbildene hos Google endres av og til; navnene under kan avvike litt.
 
 1. Gå til **console.cloud.google.com** og logg inn. Velg **Opprett prosjekt** (New project), kall det `Takt`.
-2. **APIs & Services › Library** → søk etter **Google Drive API** → **Enable**.
+2. **APIs & Services › Library** → søk etter **Google Drive API** → **Enable**. Gjør det samme for
+   **Google Calendar API** (for vaktene i kalenderen).
 3. **Google Auth Platform** (OAuth consent screen) → **Get started**: app-navn `Takt`, e-post for
    brukerstøtte, målgruppe **External**, kontakt-e-post → **Create**.
 4. **Data access** → **Add or remove scopes** → legg til `https://www.googleapis.com/auth/drive.appdata`
-   (Google kaller den ikke-sensitiv) → **Save**.
+   (ikke-sensitiv) og `https://www.googleapis.com/auth/calendar.app.created` → **Save**.
+   Kalendertilgangen regnes som sensitiv. Til appen er bekreftet av Google, ser brukerne en advarsel ved
+   innlogging til kalenderen (Takt forklarer den), og appen kan ha høyst 100 brukere. Drive-backupen påvirkes ikke.
 5. **Branding**: legg inn startside `https://<brukernavn>.github.io/takt/` og personvernside
    `https://<brukernavn>.github.io/takt/personvern.html`.
 6. **Audience** → **Publish app** (In production). I testmodus må hver bruker legges inn for hånd, og

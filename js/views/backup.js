@@ -10,7 +10,7 @@ function openBackupSheet(back) {
   const again = () => openBackupSheet(back);
   openSheet(h`${sheetHead(T.backup.title, !!back)}<div class="sh-body">
     ${hint(T.backup.intro)}
-    ${driveReady() ? h`<section class="grp"><h3>${T.drive.title}</h3><div class="rows">${navRow('drive', driveOn() ? T.drive.title : T.drive.connect, driveOn() ? backupStatus() : T.drive.meta)}</div></section>` : ''}
+    ${googleReady() ? h`<section class="grp"><h3>${T.drive.title}</h3><div class="rows">${navRow('drive', driveOn() ? T.drive.title : T.drive.connect, driveOn() ? backupStatus() : T.drive.meta)}</div></section>` : ''}
     <section class="grp"><h3>${T.backup.file}</h3><div class="rows">${navRow('export', T.backup.saveFile, T.backup.saveFileMeta)}${navRow('import', T.backup.readFile, T.backup.readFileMeta)}</div></section>
     <section class="grp quiet"><h3>${T.backup.advanced}</h3><div class="rows">${navRow('sync', T.sync.title, syncOn() ? T.sync.connectedTo(sync.cfg.repo) : T.sync.off, true)}</div></section>
   </div>`, (sheet, q) => {
@@ -74,26 +74,26 @@ function openDriveSheet(back) {
     ${wrongCode ? h`<section class="grp"><label class="field"><span>${T.drive.code}</span><input type="password" id="dr-c" autocomplete="current-password"></label>
       ${hint(T.drive.wrongCodeHint)}<button type="button" class="btn small primary" data-retry>${T.drive.tryCode}</button></section>` : ''}
     ${!wrongCode && c.pending ? h`<button type="button" class="btn small primary" data-continue>${T.drive.continue}</button>` : ''}
-    ${!c.pending ? h`<section class="grp">${hint(tokenOk() ? T.drive.loggedIn : T.drive.loggedOut)}
-      <div class="btnrow">${tokenOk() ? h`<button type="button" class="btn small" data-now>${T.drive.now}</button>` : h`<button type="button" class="btn small primary" data-login>${T.drive.login}</button>`}
+    ${!c.pending ? h`<section class="grp">${hint(driveTokenOk() ? T.drive.loggedIn : T.drive.loggedOut)}
+      <div class="btnrow">${driveTokenOk() ? h`<button type="button" class="btn small" data-now>${T.drive.now}</button>` : h`<button type="button" class="btn small primary" data-login>${T.drive.login}</button>`}
       <button type="button" class="btn small" data-restore>${T.drive.restore}</button></div></section>` : ''}
     ${delConfirm(T.drive.disconnect, T.drive.disconnectQ)}
   </div>`, (sheet, q) => {
     bindBack(sheet, back);
     const on = (sel, fn) => { const b = q(sel); if (b) b.addEventListener('click', fn); };
     on('[data-now]', async () => { drive.cfg.dirty = true; const ok = await driveBackup(); toast(ok ? T.drive.saved : drive.cfg.lastError); });
-    on('[data-login]', () => driveLogin('backup'));
-    on('[data-continue]', () => { if (tokenOk()) driveAfterConnect(); else driveLogin('connect'); });
+    on('[data-login]', () => googleLogin('backup', ['drive']));
+    on('[data-continue]', () => { if (driveTokenOk()) driveAfterConnect(); else googleLogin('connect', ['drive']); });
     on('[data-retry]', () => {
       try { driveSetCode(q('#dr-c').value); } catch (e) { toast(e.message); return; }
-      if (tokenOk()) driveAfterConnect(); else driveLogin('connect');
+      if (driveTokenOk()) driveAfterConnect(); else googleLogin('connect', ['drive']);
     });
     on('[data-restore]', () => {
-      if (!tokenOk()) { driveLogin('restore'); return; }
+      if (!driveTokenOk()) { googleLogin('restore', ['drive']); return; }
       driveRestoreAsk();
     });
     bindDelete(sheet, () => { driveDisconnect(); toast(T.drive.disconnected); render(); openBackupSheet(null); });
-  }, () => openDriveSheet(back));
+  }, Object.assign(() => openDriveSheet(back), { refresh: 'drive' }));
 }
 /* Hent backupen fra Drive på nytt (erstatter det som er i appen) */
 async function driveRestoreAsk() {
@@ -112,13 +112,21 @@ function openDriveChoiceSheet(found) {
     q('[data-keep]').addEventListener('click', driveKeepLocal);
   });
 }
-/* Påminnelse øverst på siden når backup mangler eller venter */
+/* Varsler øverst på siden: innlogging som venter, GitHub som ikke virker eller snart utløper,
+   og backup som mangler. Bare det viktigste vises, ett varsel om gangen. */
+const notice = (text, act, label) => h`<section class="card notice"><p>${text}</p><button type="button" class="btn small primary" data-act="${act}">${label}</button></section>`;
+const GITHUB_WARN_DAYS = 14;
 function backupNotice() {
-  if (driveNeedsLogin()) return h`<section class="card notice"><p>${T.drive.waiting}</p><button type="button" class="btn small primary" data-act="drive-login">${T.drive.login}</button></section>`;
+  if (calNeedsLogin()) return notice(T.calendar.waiting, 'cal-login', T.calendar.login);
+  if (driveNeedsLogin()) return notice(T.drive.waiting, 'drive-login', T.drive.login);
+  if (syncOn() && sync.cfg.lastError) return notice(T.sync.notice(sync.cfg.lastError), 'github', T.sync.open);
+  if (syncOn() && sync.cfg.expires && diffDays(todayISO(), sync.cfg.expires) <= GITHUB_WARN_DAYS) {
+    const n = diffDays(todayISO(), sync.cfg.expires);
+    return notice(n < 0 ? T.sync.expired(fmtDateShort(sync.cfg.expires)) : T.sync.expiresSoon(fmtDateShort(sync.cfg.expires), n), 'github', T.sync.open);
+  }
   if (driveOn() || syncOn() || !state.meta.setupDone || !Object.keys(state.rota.codes).length) return '';
   const since = state.meta.lastExport || state.meta.created;
   if (diffDays(since, todayISO()) < BACKUP_NAG_DAYS) return '';
-  return h`<section class="card notice"><p>${state.meta.lastExport ? T.backup.old(diffDays(state.meta.lastExport, todayISO())) : T.backup.noneYet}</p>
-    <button type="button" class="btn small primary" data-act="backup">${T.backup.choose}</button></section>`;
+  return notice(state.meta.lastExport ? T.backup.old(diffDays(state.meta.lastExport, todayISO())) : T.backup.noneYet, 'backup', T.backup.choose);
 }
 const BACKUP_NAG_DAYS = 14;

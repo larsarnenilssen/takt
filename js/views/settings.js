@@ -7,7 +7,7 @@ function openMenu() {
       ${navRow('places', T.places.title, [placeName(placeByRole('home')), placeName(placeByRole('work'))].filter(Boolean).join(' → '))}
       ${navRow('profile', T.profile.title, T.profile.meta(T.profile.themes[state.settings.theme]))}
       ${undoStack.length ? navRow('undo', T.menu.undo, undoStack[undoStack.length - 1].label) : ''}</div>
-    <section class="grp"><div class="rows">${navRow('backup', T.backup.title, backupStatus())}</div></section>
+    <section class="grp"><div class="rows">${navRow('calendar', T.calendar.title, calOn() ? T.calendar.statusOn : T.calendar.statusOff)}${navRow('backup', T.backup.title, backupStatus())}</div></section>
     <p class="hint version">${T.menu.version(APP_VERSION)} · <a href="personvern.html">${T.menu.privacy}</a></p>
   </div>`, (sheet, q) => {
     const nav = (k, fn) => { const b = q('[data-nav="' + k + '"]'); if (b) b.addEventListener('click', fn); };
@@ -16,6 +16,7 @@ function openMenu() {
     nav('profile', () => openProfileSheet(back));
     nav('undo', () => { closeSheet(); undoLast(); });
     nav('backup', () => openBackupSheet(back));
+    nav('calendar', () => openCalendarSetupSheet(back));
   }, openMenu);
 }
 
@@ -47,14 +48,15 @@ function openSyncSheet(back) {
       <section class="grp"><label class="field"><span>${T.sync.owner}</span><input type="text" id="sy-o" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
         <label class="field"><span>${T.sync.repo}</span><input type="text" id="sy-r" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="dogn-data"></label>
         <label class="field"><span>${T.sync.token}</span><input type="password" id="sy-t" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
-        ${hint(T.sync.tokenHint)}${errBox()}</section>
+        ${hint(T.sync.tokenHint)}
+        <label class="field"><span>${T.sync.expires}</span><input type="date" id="sy-x"></label>${hint(T.sync.expiresHint)}${errBox()}</section>
     </div>${sheetFoot(T.sync.connect)}`, (sheet, q) => {
       bindBack(sheet, back);
       q('[data-save]').addEventListener('click', async () => {
         const err = q('[data-err]');
         err.hidden = true;
         try {
-          const r = await connectSync(q('#sy-o').value.trim(), q('#sy-r').value.trim(), q('#sy-t').value.trim());
+          const r = await connectSync(q('#sy-o').value.trim(), q('#sy-r').value.trim(), q('#sy-t').value.trim(), q('#sy-x').value);
           if (r.isPublic) toast(T.sync.publicWarn);
           openSyncSheet(back);
           await offerRestore();
@@ -62,7 +64,7 @@ function openSyncSheet(back) {
           await pullDogn();
         } catch (e) { err.textContent = netMessage(e); err.hidden = false; }
       });
-    }, () => openSyncSheet(back));
+    }, Object.assign(() => openSyncSheet(back), { refresh: 'github' }));
     return;
   }
   const line = (label, iso8601) => h`<p class="kv"><span class="k">${label}</span><span>${iso8601 ? fmtStamp(iso8601) : T.sync.never}</span></p>`;
@@ -73,6 +75,10 @@ function openSyncSheet(back) {
       ${switchBtn('data-opt', 'share', c.share, T.sync.optShare)}${line(T.sync.lastShare, c.lastShare)}
       ${switchBtn('data-opt', 'dogn', c.dogn, T.sync.optDogn)}${line(T.sync.lastPull, c.lastPull)}${hint(T.sync.filesHint)}</section>
     <div class="btnrow"><button type="button" class="btn small" data-now>${T.sync.now}</button><button type="button" class="btn small" data-restore>${T.sync.restore}</button></div>
+    <section class="grp"><h3>${T.sync.keyHead}</h3>
+      <label class="field"><span>${T.sync.expires}</span><input type="date" id="sy-x" value="${c.expires || ''}"></label>${hint(T.sync.expiresHint)}
+      <label class="field"><span>${T.sync.newToken}</span><input type="password" id="sy-t" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>${hint(T.sync.newTokenHint)}
+      ${errBox()}<button type="button" class="btn small" data-key>${T.sync.saveKey}</button></section>
     <section class="grp quiet"><button type="button" class="btn link danger" data-off>${T.sync.disconnect}</button>${hint(T.sync.disconnectHint)}</section>
   </div>`, (sheet, q) => {
     bindBack(sheet, back);
@@ -92,8 +98,14 @@ function openSyncSheet(back) {
       toast(sync.cfg && sync.cfg.lastError ? sync.cfg.lastError : T.sync.done);
     });
     q('[data-restore]').addEventListener('click', () => offerRestore(true));
+    q('[data-key]').addEventListener('click', async () => {
+      const err = q('[data-err]');
+      err.hidden = true;
+      try { await updateSyncKey(q('#sy-t').value.trim(), q('#sy-x').value); toast(T.sync.keySaved); render(); openSyncSheet(back); }
+      catch (e) { err.textContent = netMessage(e); err.hidden = false; }
+    });
     q('[data-off]').addEventListener('click', () => { disconnectSync(); render(); openSyncSheet(back); });
-  }, () => openSyncSheet(back));
+  }, Object.assign(() => openSyncSheet(back), { refresh: 'github' }));
 }
 /* Finnes det en backup i repoet, kan den hentes inn (ved tilkobling bare når appen er tom) */
 async function offerRestore(always) {
@@ -113,13 +125,13 @@ function openSetupSheet(step = 1) {
   const done = () => { commit(null, () => { state.meta.setupDone = true; }); closeSheet(); };
   const again = () => openSetupSheet(step);
   const next = () => openSetupSheet(step + 1);
-  const steps = driveReady() ? 4 : 3;
+  const steps = googleReady() ? 4 : 3;
   const dots = h`<p class="steps" aria-label="${T.setup.stepOf(step, steps)}">${Array.from({ length: steps }, (_, i) => h`<span class="${i < step ? 'on' : ''}"></span>`)}</p>`;
   if (step === 1) {
     openSheet(h`${sheetHead(T.setup.welcome)}<div class="sh-body">${dots}
       <p class="lead">${T.setup.intro}</p>
       <section class="grp"><label class="field"><span>${T.profile.name}</span><input type="text" id="su-n" value="${state.profile.name}" placeholder="${T.profile.namePh}"></label></section>
-      <section class="grp quiet"><h3>${T.setup.haveData}</h3><div class="btnrow">${driveReady() ? h`<button type="button" class="btn small" data-drive>${T.setup.fromDrive}</button>` : ''}<button type="button" class="btn small" data-file>${T.setup.fromFile}</button><button type="button" class="btn small" data-gh>${T.setup.fromGithub}</button></div></section>
+      <section class="grp quiet"><h3>${T.setup.haveData}</h3><div class="btnrow">${googleReady() ? h`<button type="button" class="btn small" data-drive>${T.setup.fromDrive}</button>` : ''}<button type="button" class="btn small" data-file>${T.setup.fromFile}</button><button type="button" class="btn small" data-gh>${T.setup.fromGithub}</button></div></section>
     </div>${sheetFoot(T.setup.next)}`, (sheet, q) => {
       q('[data-save]').addEventListener('click', () => { commit(null, () => { state.profile.name = str(q('#su-n').value.trim(), 60); }); next(); });
       q('[data-file]').addEventListener('click', importBackupFile);

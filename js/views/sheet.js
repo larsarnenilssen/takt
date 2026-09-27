@@ -54,6 +54,8 @@ function closeSheet(fromHistory) {
   setTimeout(() => { if (!root.classList.contains('open')) { root.hidden = true; root.innerHTML = ''; } }, 260);
 }
 const sheetOpen = () => sheetShown;
+/* Tegner et åpent ark på nytt etter en jobb i bakgrunnen. Arket merker seg med again.refresh = navn. */
+function refreshSheet(name) { if (sheetOpen() && reopen && reopen.refresh === name) reopen(); }
 window.addEventListener('popstate', () => { if (sheetInHistory) { sheetInHistory = false; closeSheet(true); } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen()) closeSheet(); });
 

@@ -81,7 +81,7 @@ async function runSync(job) {
     saveSync();
     scheduleSync();
     render();
-    if (sheetOpen() && reopen === openSyncSheet) openSyncSheet();
+    refreshSheet('github');
   }
   return ok;
 }
@@ -126,12 +126,26 @@ function maybePullDogn() {
   if (dognOn() && !sync.busy && Date.now() - Date.parse(sync.cfg.lastPull || 0) > PULL_INTERVAL - 5000) pullDogn();
 }
 
-async function connectSync(owner, repo, token) {
-  sync.cfg = { owner, repo, token, backup: true, share: true, dogn: true, lastPush: '', lastShare: '', lastPull: '', lastError: '', dirty: true, shareDirty: true };
+async function connectSync(owner, repo, token, expires) {
+  sync.cfg = { owner, repo, token, expires: isDate(expires) ? expires : '', backup: true, share: true, dogn: true, lastPush: '', lastShare: '', lastPull: '', lastError: '', dirty: true, shareDirty: true };
   const r = await gh('GET', '/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo));
   if (!r.ok) { const e = ghError(r); sync.cfg = null; throw e; }
   const info = await r.json();
   saveSync();
   return { isPublic: info.private === false };
+}
+/* Ny nøkkel (når den gamle utløper) og/eller utløpsdato. En ny nøkkel prøves før den tas i bruk. */
+async function updateSyncKey(token, expires) {
+  if (token) {
+    const old = sync.cfg.token;
+    sync.cfg.token = token;
+    const r = await gh('GET', '/repos/' + encodeURIComponent(sync.cfg.owner) + '/' + encodeURIComponent(sync.cfg.repo));
+    if (!r.ok) { sync.cfg.token = old; throw ghError(r); }
+    sync.cfg.lastError = '';
+    Object.assign(sync.cfg, { dirty: true, shareDirty: true });
+  }
+  sync.cfg.expires = isDate(expires) ? expires : '';
+  saveSync();
+  scheduleSync();
 }
 function disconnectSync() { clearTimeout(sync.timer); clearTimeout(sync.shareTimer); sync.cfg = null; saveSync(); }

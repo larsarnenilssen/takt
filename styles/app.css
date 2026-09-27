@@ -98,6 +98,11 @@ h2,h3{margin:0}
 .home .dinner,.home .appt{margin:var(--sp-2) 0 0;font-size:var(--fs-md)}
 .home .dinner .k{font-weight:650}
 
+/* Forklaringer i ark */
+.sh-body>*{flex-shrink:0}
+.sh-body>p{margin:0}
+.plain{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:var(--sp-3);font-size:var(--fs-md)}
+
 /* Påminnelse om backup */
 .card.notice{display:flex;flex-direction:column;gap:var(--sp-4);border-color:var(--accent-line);background:var(--accent-soft)}
 .card.notice p{margin:0;font-size:var(--fs-md)}

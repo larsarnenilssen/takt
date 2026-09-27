@@ -47,7 +47,7 @@ const store = {
 
 let saveTimer = null;
 async function save() { const ok = await store.set('state', state); if (ok !== store.ok) { store.ok = ok; render(); } }
-function persist(shared) { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); markDirty(shared); driveDirty(); }
+function persist(shared) { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); markDirty(shared); driveDirty(); if (shared) calDirty(); }
 function flush() { clearTimeout(saveTimer); if (state) save(); }
 
 /* ---------- angre ----------

@@ -45,7 +45,9 @@ $('#page').addEventListener('click', e => {
     case 'refresh': tripCache.clear(); render(); break;
     case 'add': openItemSheet(null, view); break;
     case 'backup': openBackupSheet(null); break;
-    case 'drive-login': driveLogin('backup'); break;
+    case 'drive-login': googleLogin('backup', ['drive']); break;
+    case 'cal-login': googleLogin('calendar', ['cal']); break;
+    case 'github': openSyncSheet(null); break;
   }
 });
 
@@ -63,7 +65,8 @@ function tick() {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) { tick(); return; }
   flush();
-  if (tokenOk() && drive.cfg.dirty) driveBackup();   // backup når appen legges bort
+  if (driveTokenOk() && drive.cfg.dirty) driveBackup();   // backup når appen legges bort
+  if (calTokenOk() && cal.cfg.dirty) calSync();
 });
 window.addEventListener('pagehide', flush);
 try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (state && state.settings.theme === 'auto') applyTheme(); }); } catch (e) {}
@@ -74,6 +77,8 @@ try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change
   await loadDognCache();
   await loadTripCache();
   await loadDrive();
+  await loadCal();
+  await loadGoogle();
   const afterLogin = takeLoginReturn();
   let saved = null;
   try { saved = await store.get('state'); } catch (e) {}
@@ -93,8 +98,10 @@ try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change
   // Tilbake fra innlogging hos Google: fortsett der brukeren var
   if (afterLogin === 'connect') driveAfterConnect();
   else if (afterLogin === 'restore') driveRestoreAsk();
+  else if (afterLogin === 'calendar') { calSync(); openCalendarSetupSheet(null); }
   else if (afterLogin === 'backup') { if (drive.cfg.pending) driveAfterConnect(); else driveBackup().then(ok => toast(ok ? T.drive.saved : drive.cfg.lastError)); }
   scheduleDrive();
+  if (calTokenOk() && cal.cfg.dirty && afterLogin !== 'calendar') calSync();
   if (!afterLogin) setTimeout(() => { if (!state.meta.setupDone && !sheetOpen()) openSetupSheet(1); }, 300);
   if (syncOn()) { scheduleSync(); if (sync.cfg.share && (sync.cfg.lastShare || '').slice(0, 10) !== todayISO()) markDirty(true); maybePullDogn(); }
   setInterval(tick, 30000);
