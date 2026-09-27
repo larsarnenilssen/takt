@@ -155,10 +155,11 @@ function openSetupSheet(step = 1) {
   } else if (step === 3) {
     openSheet(h`${sheetHead(T.setup.rotaTitle, true)}<div class="sh-body">${dots}
       ${hint(T.setup.rotaHint)}
-      <div class="btnrow"><button type="button" class="btn primary" data-pdf>${T.rota.importPdf}</button><button type="button" class="btn" data-later>${steps > 3 ? T.setup.next : T.setup.later}</button></div>
+      <div class="btnrow"><button type="button" class="btn primary" data-pdf>${T.rota.importPdf}</button><button type="button" class="btn" data-manual>${T.rota.manual}</button><button type="button" class="btn" data-later>${steps > 3 ? T.setup.next : T.setup.later}</button></div>
     </div>`, (sheet, q) => {
       bindBack(sheet, () => openSetupSheet(2));
       q('[data-pdf]').addEventListener('click', () => { commit(null, () => { state.meta.setupDone = true; }); importPdf(null); });
+      q('[data-manual]').addEventListener('click', () => { commit(null, () => { state.meta.setupDone = true; }); openRotaGridSheet(null); });
       q('[data-later]').addEventListener('click', steps > 3 ? next : done);
     }, again);
   } else {

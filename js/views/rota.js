@@ -76,11 +76,12 @@ function openRotaSheet(back) {
   const src = state.rota.source;
   openSheet(h`${sheetHead(T.rota.title, !!back)}<div class="sh-body">
     ${src ? h`<p class="hint">${T.rota.sourceInfo(fmtDateShort(src.from), fmtDateShort(src.to), src.importedAt ? fmtStamp(src.importedAt) : '')}</p>` : hint(T.rota.intro)}
-    <div class="rows">${navRow('pdf', T.rota.importPdf, T.rota.importPdfMeta)}${navRow('file', T.rota.importFile, T.rota.importFileMeta)}
+    <div class="rows">${navRow('manual', T.rota.manual, T.rota.manualMeta)}${navRow('pdf', T.rota.importPdf, T.rota.importPdfMeta)}${navRow('file', T.rota.importFile, T.rota.importFileMeta)}
       ${navRow('codes', T.rota.codesTitle, T.rota.codeCount(codeList().length))}${navRow('export', T.rota.exportFile, T.rota.exportMeta)}</div>
   </div>`, (sheet, q) => {
     bindBack(sheet, back);
     const again = () => openRotaSheet(back);
+    q('[data-nav="manual"]').addEventListener('click', () => openRotaGridSheet(again));
     q('[data-nav="pdf"]').addEventListener('click', () => importPdf(again));
     q('[data-nav="file"]').addEventListener('click', async () => {
       const text = await pickFile('.json,.txt,application/json,text/plain');

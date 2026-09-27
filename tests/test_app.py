@@ -849,6 +849,62 @@ class TaktTest(unittest.TestCase):
         self.page.click('[data-nav="backup"]')
         self.assertEqual(self.page.locator('[data-nav="sync"]').count(), 1)
 
+    def test_manual_rota_grid(self):
+        self.open()
+        self.js("() => commit('', () => { setDayCode('2026-10-06', 'N'); setDayCustom('2026-10-07', '08:00', '12:00', 'Kurs'); })")
+        self.page.click('#tab-more')
+        self.page.click('[data-nav="rota"]')
+        self.page.click('[data-nav="manual"]')
+        cell = lambda d: self.page.locator(f'[data-d="{d}"]')
+        # Seks uker fra denne uken, fylt med vaktene slik de er nå (med endringer for hånd)
+        self.assertEqual(self.page.locator('.rg-c').count(), 42)
+        self.assertIn('D', cell('2026-10-05').inner_text())
+        self.assertIn('N', cell('2026-10-06').inner_text())
+        self.assertEqual(cell('2026-10-07').locator('.rg-cu').count(), 1, 'egne tider er merket')
+        # Trykk maler én dag
+        self.page.click('[data-brush="A14"]')
+        cell('2026-10-12').click()
+        # Ny kode underveis: utkastet beholdes
+        self.page.click('[data-newcode]')
+        self.page.fill('#cd-c', 'k')
+        self.page.fill('#cd-s', '08:00')
+        self.page.fill('#cd-e', '15:30')
+        self.page.click('.sh-foot [data-save]')
+        self.page.wait_for_selector('[data-brush="K"]')
+        self.assertIn('A14', cell('2026-10-12').inner_text())
+        # Gjenta de to første ukene ut perioden
+        self.page.fill('#rg-rep', '2')
+        self.page.click('[data-repeat]')
+        self.assertIn('A14', cell('2026-10-26').inner_text())
+        self.assertIn('D', cell('2026-10-19').inner_text())
+        # Dra vannrett over mandag–torsdag i siste uke med K, og tøm en søndag
+        self.page.click('[data-brush="K"]')
+        cell('2026-11-09').evaluate("el => el.scrollIntoView({ block: 'center' })")
+        a, b = cell('2026-11-09').bounding_box(), cell('2026-11-12').bounding_box()
+        y = a['y'] + a['height'] / 2
+        self.page.mouse.move(a['x'] + 5, y)
+        self.page.mouse.down()
+        for i in range(1, 11):
+            self.page.mouse.move(a['x'] + 5 + (b['x'] - a['x']) * i / 10, y)
+        self.page.mouse.up()
+        self.page.click('[data-brush=""]')
+        cell('2026-11-01').click()
+        self.page.click('.sh-foot [data-save]')
+        R = self.js('() => state.rota')
+        self.assertEqual([R['shifts'].get(d) for d in ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13']], ['K', 'K', 'K', 'K', 'D'])
+        self.assertEqual(R['shifts']['2026-10-06'], 'N', 'endringen for hånd er lagt inn i turnusen')
+        self.assertEqual(R['overrides'], {})
+        self.assertEqual(R['custom']['2026-10-07']['label'], 'Kurs', 'egne tider beholdes')
+        self.assertEqual(R['shifts']['2026-10-26'], 'A14')
+        self.assertNotIn('2026-11-01', R['shifts'])
+        self.assertEqual(R['codes']['K']['start'], '08:00')
+        self.assertEqual(R['source']['to'], '2026-11-15')
+        # Utkastet er borte etter lagring; neste gang starter rutenettet fra turnusen
+        self.assertIsNone(self.js('() => rotaDraft'))
+        # Angre tar hele innleggingen tilbake
+        self.js('() => undoLast()')
+        self.assertEqual(self.js("() => state.rota.overrides['2026-10-06']"), 'N')
+
     # ---------- navigasjon, sveip og visning ----------
     def test_calendar_month_and_jump(self):
         self.open()

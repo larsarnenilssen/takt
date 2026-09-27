@@ -97,6 +97,23 @@ function applyRota(entries, newCodes, { from, to, keepManual }) {
   R.source = { from, to, importedAt: new Date().toISOString() };
   return n;
 }
+/* Turnus skrevet inn for hånd: entries { dato: kode } for hele perioden from–to ('' eller mangler = ingen vakt).
+   Rutenettet viste koden med endringene for hånd, så de legges inn i turnusen. Egne tider beholdes,
+   unntatt på dager i cleared (dager brukeren har gitt en kode i rutenettet). */
+function setRotaRange(entries, from, to, cleared) {
+  const R = state.rota;
+  if (!isDate(from) || !isDate(to) || to < from) throw new UserError(T.rota.badPeriod);
+  for (const c of new Set(Object.values(entries))) if (c && !R.codes[c]) throw new UserError(T.rota.badCodeIn(c));
+  let n = 0;
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    delete R.shifts[d]; delete R.overrides[d];
+    if (cleared.has(d)) delete R.custom[d];
+    if (entries[d]) { R.shifts[d] = entries[d]; n++; }
+  }
+  const S = R.source;
+  R.source = { from: S && S.from < from ? S.from : from, to: S && S.to > to ? S.to : to, importedAt: new Date().toISOString() };
+  return n;
+}
 /* Turnusfil (JSON fra Takt eller Døgn), eller tekst med én dag per linje: «2026-10-01 D» / «01.10.2026 D» */
 function parseRotaText(text) {
   const t = String(text).trim();
