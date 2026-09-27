@@ -22,18 +22,19 @@ function openCalendarSetupSheet(back) {
     return;
   }
   openSheet(h`${sheetHead(T.calendar.title, !!back)}<div class="sh-body">
-    <p class="lead">${c.lastSync ? T.calendar.last(fmtStamp(c.lastSync)) : T.calendar.notYet}</p>
+    <p class="lead">${c.lastError ? T.calendar.notDone : c.lastSync ? T.calendar.last(fmtStamp(c.lastSync)) : T.calendar.notYet}</p>
     <p class="hint" id="cal-progress">${cal.progress}</p>
-    ${c.lastError ? h`<p class="err">${c.lastError}</p>` : ''}
+    ${c.lastError ? h`<p class="err">${c.lastError}</p>${hint(T.calendar.errorHint, true)}` : c.result ? h`<p class="ok">${T.calendar.result(c.result)}</p>` : ''}
     ${hint(calTokenOk() ? T.calendar.loggedIn : T.calendar.loggedOut)}
-    <div class="btnrow">${calTokenOk() ? h`<button type="button" class="btn small" data-now>${T.calendar.now}</button>` : h`<button type="button" class="btn small primary" data-login>${T.calendar.login}</button>`}</div>
+    <div class="btnrow">${calTokenOk() ? h`<button type="button" class="btn small${c.lastError ? ' primary' : ''}" data-now${cal.busy ? raw(' disabled') : ''}>${T.calendar.now}</button>` : h`<button type="button" class="btn small primary" data-login>${T.calendar.login}</button>`}</div>
+    ${hint(T.calendar.nowHint)}
     ${fileRow}
     <section class="grp quiet"><button type="button" class="btn link danger" data-off>${T.calendar.off}</button>
       <div class="confirm" data-offq hidden>${hint(T.calendar.offQ)}<div class="btnrow"><button type="button" class="btn small danger" data-off-remove>${T.calendar.offRemove}</button><button type="button" class="btn small" data-off-keep>${T.calendar.offKeep}</button></div></div></section>
   </div>`, (sheet, q) => {
     bindBack(sheet, back);
     const on = (sel, fn) => { const b = q(sel); if (b) b.addEventListener('click', fn); };
-    on('[data-now]', () => { cal.cfg.dirty = true; calSync(); });
+    on('[data-now]', async () => { const ok = await calSync(true); toast(ok ? T.calendar.checkedToast(cal.cfg.result.changed) : T.calendar.notDone); });
     on('[data-login]', () => googleLogin('calendar', ['cal']));
     on('[data-file]', shareCalendarFile);
     on('[data-off]', () => { q('[data-offq]').hidden = false; q('[data-off]').hidden = true; });

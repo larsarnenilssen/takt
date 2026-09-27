@@ -59,7 +59,12 @@ function takeLoginReturn() {
 async function gfetch(url, opts = {}) {
   const r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: 'Bearer ' + google.cfg.token } });
   if (r.status === 401) { google.cfg.token = ''; saveGoogle(); throw new UserError(T.google.loginAgain); }
-  if (!r.ok) { const e = new UserError(T.google.failed(r.status)); e.status = r.status; throw e; }
+  if (!r.ok) {
+    const e = new UserError(T.google.failed(r.status));
+    e.status = r.status;
+    try { const j = await r.json(); e.reason = (j.error && j.error.errors && j.error.errors[0] && j.error.errors[0].reason) || ''; } catch (x) { e.reason = ''; }
+    throw e;
+  }
   return r;
 }
 /* Når verken backup eller kalender er i bruk, gis nøkkelen tilbake */

@@ -175,6 +175,9 @@ class FakeGoogle:
     # Google-kalenderen: kalendere appen har laget, og hendelsene i dem
     calendars = None
 
+    limit_posts = 0      # så mange innsettinger svarer 403 rateLimitExceeded (Googles fartsgrense)
+    fail_id = ''         # denne hendelsen avvises (400)
+
     def calendar(self, route, req, u):
         if self.calendars is None:
             self.calendars, self.cal_calls = {}, []
@@ -193,8 +196,15 @@ class FakeGoogle:
         if len(parts) == 1 and req.method == 'DELETE':
             del self.calendars[cid]
             return ok()
+        if len(parts) == 2 and req.method == 'GET':
+            return ok({'items': list(events.values())})
         if len(parts) == 2 and req.method == 'POST':
             ev = json.loads(req.post_data)
+            if self.limit_posts > 0:
+                self.limit_posts -= 1
+                return route.fulfill(status=403, content_type='application/json', body=json.dumps({'error': {'errors': [{'reason': 'rateLimitExceeded'}]}}))
+            if ev['id'] == self.fail_id:
+                return route.fulfill(status=400, content_type='application/json', body='{}')
             events[ev['id']] = ev
             return ok(ev)
         eid = parts[2]
@@ -689,6 +699,52 @@ class TaktTest(unittest.TestCase):
         self.assertNotIn('Privat', titles)
         self.assertNotIn('tks20261005', ev)
         self.assertEqual(len(self.google.cal_calls) - calls, 2, 'én ny avtale og én slettet vakt')
+
+
+    def connect_calendar(self):
+        """Kalenderen slått på med gyldig innlogging, uten å gå via Google-siden"""
+        self.js("() => { google.cfg = { token: 'tok9', exp: Date.now() + 3e6, scopes: [GOOGLE.SCOPES.cal], lastError: '' }; RETRY_MS.fill(20); calConnect(); }")
+        self.page.wait_for_function('() => !cal.busy && !!(cal.cfg.lastSync || cal.cfg.lastError)')
+
+    def test_calendar_waits_and_retries_when_google_limits_speed(self):
+        self.open()
+        self.google.calendars, self.google.cal_calls = {}, []
+        self.google.limit_posts = 5
+        self.connect_calendar()
+        self.assertEqual(self.js('() => cal.cfg.lastError'), '')
+        self.assertEqual(len(self.google.events()), 9)
+        self.assertEqual(self.js('() => cal.cfg.result'), {'shifts': 9, 'appts': 0, 'changed': 9, 'checked': False})
+        # Takt husker hva som er sendt: en ny oppdatering uten endringer sender ingenting
+        self.assertEqual(self.js('() => Object.keys(cal.cfg.synced).length'), 9)
+        calls = len(self.google.cal_calls)
+        self.js("() => { cal.cfg.dirty = true; return calSync(); }")
+        self.assertEqual(len(self.google.cal_calls), calls)
+
+    def test_calendar_error_is_explained_and_check_repairs(self):
+        self.open()
+        self.google.calendars, self.google.cal_calls = {}, []
+        self.google.fail_id = 'tks20261008'
+        self.connect_calendar()
+        err = self.js('() => cal.cfg.lastError')
+        self.assertIn('8 av 9 ble oppdatert', err)
+        self.assertTrue(self.js('() => cal.cfg.dirty'))
+        self.page.click('#tab-more')
+        self.page.click('[data-nav="calendar"]')
+        text = self.sheet().inner_text()
+        self.assertIn('ikke ferdig oppdatert', text)
+        self.assertEqual(self.page.inner_text('#cal-progress'), '', 'ingen gammel framdrift står igjen')
+        # Feilen er borte hos Google. En hendelse slettes og en endres i kalenderen; kontrollen retter alt.
+        self.google.fail_id = ''
+        ev = self.google.events()
+        del ev['tks20261005']
+        ev['tks20261006']['summary'] = 'Endret i kalenderen'
+        self.page.click('[data-now]')
+        self.page.wait_for_function('() => !cal.busy && !cal.cfg.lastError && cal.cfg.result.checked')
+        ev = self.google.events()
+        self.assertEqual(len(ev), 9)
+        self.assertEqual(ev['tks20261006']['summary'], 'D · Dagvakt')
+        self.assertEqual(self.js('() => cal.cfg.result.changed'), 3)
+        self.assertIn('Kontrollert: 9 vakter ligger i kalenderen og stemmer med Takt.', self.sheet().inner_text())
 
     def test_calendar_file(self):
         self.page.add_init_script("navigator.canShare = () => true; navigator.share = async d => { window.__ics = await d.files[0].text(); };")
