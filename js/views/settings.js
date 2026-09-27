@@ -7,30 +7,16 @@ function openMenu() {
       ${navRow('places', T.places.title, [placeName(placeByRole('home')), placeName(placeByRole('work'))].filter(Boolean).join(' → '))}
       ${navRow('profile', T.profile.title, T.profile.meta(T.profile.themes[state.settings.theme]))}
       ${undoStack.length ? navRow('undo', T.menu.undo, undoStack[undoStack.length - 1].label) : ''}</div>
-    <section class="grp"><h3>${T.menu.file}</h3><div class="rows">${navRow('export', T.menu.exportBackup, T.menu.exportMeta)}${navRow('import', T.menu.importBackup, T.menu.importMeta)}</div></section>
-    <section class="grp quiet"><h3>${T.menu.optional}</h3><div class="rows">${navRow('sync', T.sync.title, syncOn() ? T.sync.connectedTo(sync.cfg.repo) : T.sync.off, true)}</div></section>
-    <p class="hint version">${T.menu.version(APP_VERSION)}</p>
+    <section class="grp"><div class="rows">${navRow('backup', T.backup.title, backupStatus())}</div></section>
+    <p class="hint version">${T.menu.version(APP_VERSION)} · <a href="personvern.html">${T.menu.privacy}</a></p>
   </div>`, (sheet, q) => {
     const nav = (k, fn) => { const b = q('[data-nav="' + k + '"]'); if (b) b.addEventListener('click', fn); };
     nav('rota', () => openRotaSheet(back));
     nav('places', () => openPlacesSheet(back));
     nav('profile', () => openProfileSheet(back));
     nav('undo', () => { closeSheet(); undoLast(); });
-    nav('export', () => downloadJson(T.menu.backupName(todayISO()), state));
-    nav('import', importBackupFile);
-    nav('sync', () => openSyncSheet(back));
+    nav('backup', () => openBackupSheet(back));
   }, openMenu);
-}
-
-async function importBackupFile() {
-  const text = await pickFile('.json,application/json');
-  if (text == null) return;
-  try {
-    const next = migrate(JSON.parse(text));
-    commit(T.menu.imported, () => { state = next; });
-    applyTheme();
-    closeSheet();
-  } catch (e) { toast(e instanceof UserError ? e.message : T.file.notTakt); }
 }
 
 function openProfileSheet(back) {
@@ -127,15 +113,18 @@ function openSetupSheet(step = 1) {
   const done = () => { commit(null, () => { state.meta.setupDone = true; }); closeSheet(); };
   const again = () => openSetupSheet(step);
   const next = () => openSetupSheet(step + 1);
-  const dots = h`<p class="steps" aria-label="${T.setup.stepOf(step, 3)}">${[1, 2, 3].map(i => h`<span class="${i <= step ? 'on' : ''}"></span>`)}</p>`;
+  const steps = driveReady() ? 4 : 3;
+  const dots = h`<p class="steps" aria-label="${T.setup.stepOf(step, steps)}">${Array.from({ length: steps }, (_, i) => h`<span class="${i < step ? 'on' : ''}"></span>`)}</p>`;
   if (step === 1) {
     openSheet(h`${sheetHead(T.setup.welcome)}<div class="sh-body">${dots}
       <p class="lead">${T.setup.intro}</p>
       <section class="grp"><label class="field"><span>${T.profile.name}</span><input type="text" id="su-n" value="${state.profile.name}" placeholder="${T.profile.namePh}"></label></section>
-      <section class="grp quiet"><h3>${T.setup.haveData}</h3><div class="btnrow"><button type="button" class="btn small" data-file>${T.menu.importBackup}</button><button type="button" class="btn small" data-gh>${T.setup.fromGithub}</button></div></section>
+      <section class="grp quiet"><h3>${T.setup.haveData}</h3><div class="btnrow">${driveReady() ? h`<button type="button" class="btn small" data-drive>${T.setup.fromDrive}</button>` : ''}<button type="button" class="btn small" data-file>${T.setup.fromFile}</button><button type="button" class="btn small" data-gh>${T.setup.fromGithub}</button></div></section>
     </div>${sheetFoot(T.setup.next)}`, (sheet, q) => {
       q('[data-save]').addEventListener('click', () => { commit(null, () => { state.profile.name = str(q('#su-n').value.trim(), 60); }); next(); });
       q('[data-file]').addEventListener('click', importBackupFile);
+      const dr = q('[data-drive]');
+      if (dr) dr.addEventListener('click', () => openDriveSheet(again));
       q('[data-gh]').addEventListener('click', () => openSyncSheet(again));
     }, again);
   } else if (step === 2) {
@@ -150,13 +139,22 @@ function openSetupSheet(step = 1) {
       sheet.querySelectorAll('[data-role]').forEach(b => b.addEventListener('click', () => { keepTimes(); openPlaceSheet(placeByRole(b.dataset.role), b.dataset.role, again); }));
       q('[data-save]').addEventListener('click', () => { keepTimes(); next(); });
     }, again);
-  } else {
+  } else if (step === 3) {
     openSheet(h`${sheetHead(T.setup.rotaTitle, true)}<div class="sh-body">${dots}
       ${hint(T.setup.rotaHint)}
-      <div class="btnrow"><button type="button" class="btn primary" data-pdf>${T.rota.importPdf}</button><button type="button" class="btn" data-later>${T.setup.later}</button></div>
+      <div class="btnrow"><button type="button" class="btn primary" data-pdf>${T.rota.importPdf}</button><button type="button" class="btn" data-later>${steps > 3 ? T.setup.next : T.setup.later}</button></div>
     </div>`, (sheet, q) => {
       bindBack(sheet, () => openSetupSheet(2));
       q('[data-pdf]').addEventListener('click', () => { commit(null, () => { state.meta.setupDone = true; }); importPdf(null); });
+      q('[data-later]').addEventListener('click', steps > 3 ? next : done);
+    }, again);
+  } else {
+    openSheet(h`${sheetHead(T.setup.backupTitle, true)}<div class="sh-body">${dots}
+      ${hint(T.setup.backupHint)}
+      <div class="btnrow"><button type="button" class="btn primary" data-drive>${T.drive.connect}</button><button type="button" class="btn" data-later>${T.setup.later}</button></div>
+    </div>`, (sheet, q) => {
+      bindBack(sheet, () => openSetupSheet(3));
+      q('[data-drive]').addEventListener('click', () => { commit(null, () => { state.meta.setupDone = true; }); openDriveSheet(again); });
       q('[data-later]').addEventListener('click', done);
     }, again);
   }

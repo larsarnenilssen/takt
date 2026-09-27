@@ -16,11 +16,13 @@ const ICON = {
 let reopen = null;        // arket som skal vises igjen etter «Angre» eller en synkronisering
 let sheetSeq = 0;         // hindrer at et ark som allerede er lukket, åpnes av animasjonen
 let sheetInHistory = false;
+let sheetShown = false;   // sant fra et ark åpnes til det lukkes (også mens det glir inn)
 function openSheet(html, mount, again) {
   const root = $('#sheet-root');
   const seq = ++sheetSeq;
   const wasOpen = root.classList.contains('open');
   reopen = again || null;
+  sheetShown = true;
   setHtml(root, h`<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab" aria-hidden="true"></div>${html}</div>`);
   root.hidden = false;
   document.body.classList.add('locked');
@@ -44,13 +46,14 @@ function closeSheet(fromHistory) {
   const root = $('#sheet-root');
   if (!root.classList.contains('open') && root.hidden) return;
   sheetSeq++;
+  sheetShown = false;
   root.classList.remove('open');
   document.body.classList.remove('locked');
   reopen = null;
   if (sheetInHistory) { sheetInHistory = false; if (fromHistory !== true) history.back(); }
   setTimeout(() => { if (!root.classList.contains('open')) { root.hidden = true; root.innerHTML = ''; } }, 260);
 }
-const sheetOpen = () => $('#sheet-root').classList.contains('open');
+const sheetOpen = () => sheetShown;
 window.addEventListener('popstate', () => { if (sheetInHistory) { sheetInHistory = false; closeSheet(true); } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen()) closeSheet(); });
 
@@ -64,10 +67,10 @@ function sheetHead(title, back) {
 function bindBack(sheet, back) { const b = sheet.querySelector('[data-goback]'); if (b && back) b.addEventListener('click', back); }
 const sheetFoot = (label, attr = 'data-save') => h`<div class="sh-foot"><button type="button" class="btn primary grow" ${raw(attr)}>${label}</button></div>`;
 const navRow = (act, label, meta, quiet) => h`<button type="button" class="row${quiet ? ' quiet' : ''}" data-nav="${act}"><span class="grow">${label}${meta ? h`<span class="m">${meta}</span>` : ''}</span><span class="chev" aria-hidden="true">›</span></button>`;
-/* Hjelpetekst: første setning vises, resten bak en liten «?» */
-function hint(text) {
+/* Hjelpetekst: første setning vises, resten bak en liten «?». full: vis alt (for det som ikke må overses). */
+function hint(text, full) {
   text = String(text);
-  const m = text.length > 90 && text.match(/^(.+?[.!?»])\s+(?=[A-ZÆØÅ«])([\s\S]+)$/);
+  const m = !full && text.length > 90 && text.match(/^(.+?[.!?»])\s+(?=[A-ZÆØÅ«])([\s\S]+)$/);
   return m ? h`<p class="hint">${m[1]} <button type="button" class="qm" data-qm aria-expanded="false" aria-label="${T.common.moreInfo}">?</button></p><p class="hint more" hidden>${m[2]}</p>`
     : h`<p class="hint">${text}</p>`;
 }

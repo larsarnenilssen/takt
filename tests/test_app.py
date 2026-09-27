@@ -129,6 +129,46 @@ class FakeGitHub:
         return json.loads(self.files[path])
 
 
+class FakeGoogle:
+    """Innlogging hos Google og en skjult app-mappe i Drive, i minnet."""
+
+    def __init__(self):
+        self.files, self.uploads, self.logins = {}, 0, 0
+
+    def auth(self, route):
+        q = parse_qs(urlparse(route.request.url).query)
+        self.logins += 1
+        frag = 'access_token=tok%d&token_type=Bearer&expires_in=3599&state=%s' % (self.logins, q['state'][0])
+        route.fulfill(status=302, headers={'Location': q['redirect_uri'][0] + '#' + frag})
+
+    def api(self, route):
+        req = route.request
+        u = urlparse(req.url)
+        if not (req.headers.get('authorization') or '').startswith('Bearer tok'):
+            return route.fulfill(status=401, body='{}')
+        m = re.search(r'/files/([^/?]+)', u.path)
+        if req.method == 'GET' and not m:
+            files = [{'id': k, 'modifiedTime': v['modified']} for k, v in self.files.items()]
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'files': files}))
+        if req.method == 'GET':
+            return route.fulfill(status=200, content_type='application/json', body=self.files[m.group(1)]['content'])
+        self.uploads += 1
+        if req.method == 'PATCH':
+            self.files[m.group(1)] = {'content': req.post_data, 'modified': '2026-10-05T06:0%d:00Z' % min(9, self.uploads)}
+            return route.fulfill(status=200, content_type='application/json', body='{}')
+        body = req.post_data
+        parts = [p for p in body.split('\r\n\r\n')[1:]]
+        meta = json.loads(parts[0].split('\r\n')[0])
+        content = parts[1].rsplit('\r\n--', 1)[0]
+        assert meta['parents'] == ['appDataFolder']
+        fid = 'f%d' % (len(self.files) + 1)
+        self.files[fid] = {'content': content, 'modified': '2026-10-05T06:00:00Z'}
+        return route.fulfill(status=200, content_type='application/json', body=json.dumps({'id': fid}))
+
+    def only(self):
+        return json.loads(next(iter(self.files.values()))['content'])
+
+
 # En testbruker etter oppsett: steder, vaktkoder, to uker med vakter og favoritter.
 SEED_JS = """() => commit(null, () => {
   state.profile.name = 'Kari';
@@ -185,6 +225,8 @@ class TaktTest(unittest.TestCase):
                                             locale='nb-NO', timezone_id='Europe/Oslo', color_scheme='light')
         self.ctx.route('https://api.entur.io/**', self._entur)
         self.ctx.route('https://api.github.com/**', self.gh.handle)
+        self.google = FakeGoogle()
+        self.route_google(self.ctx)
         self.page = self.ctx.new_page()
         self.errors = []
         self.page.on('pageerror', lambda e: self.errors.append(str(e)))
@@ -193,6 +235,32 @@ class TaktTest(unittest.TestCase):
     def tearDown(self):
         self.ctx.close()
         self.assertEqual(self.errors, [], 'feil i siden')
+
+    def route_google(self, ctx):
+        ctx.route('**/js/config.js', lambda r: r.fulfill(status=200, content_type='text/javascript', body="const GOOGLE_CLIENT_ID = 'test-client';"))
+        ctx.route('https://accounts.google.com/**', self.google.auth)
+        ctx.route('https://www.googleapis.com/**', self.google.api)
+
+    def new_phone(self):
+        """En ny telefon: tom app, men samme Google-konto."""
+        ctx = self.browser.new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True, locale='nb-NO', timezone_id='Europe/Oslo')
+        ctx.route('https://api.entur.io/**', self._entur)
+        self.route_google(ctx)
+        self.addCleanup(ctx.close)
+        pg = ctx.new_page()
+        pg.on('pageerror', lambda e: self.errors.append(str(e)))
+        pg.clock.set_fixed_time(NOW)
+        pg.goto(self.base)
+        pg.wait_for_function(READY)
+        pg.wait_for_selector('#sheet-root.open')
+        return pg
+
+    def drive_connect(self, pg, code, again=None):
+        pg.fill('#dr-c', code)
+        pg.fill('#dr-c2', again or code)
+        pg.click('.sh-foot [data-save]')
+        pg.wait_for_load_state()
+        pg.wait_for_function(READY)
 
     def _entur(self, route):
         url = route.request.url
@@ -234,7 +302,8 @@ class TaktTest(unittest.TestCase):
         self.page.click('#pl-hits [data-hit="0"]')
         self.page.click('.sh-foot [data-save]')
         self.page.click('.sh-foot [data-save]')
-        self.page.click('[data-later]')
+        self.page.click('[data-later]')          # turnus senere
+        self.page.click('[data-later]')          # backup senere
         s = self.js('() => state')
         self.assertTrue(s['meta']['setupDone'])
         self.assertEqual(s['profile']['name'], 'Kari')
@@ -387,6 +456,7 @@ class TaktTest(unittest.TestCase):
     # ---------- backup og deling ----------
     def connect(self):
         self.page.click('#tab-more')
+        self.page.click('[data-nav="backup"]')
         self.page.click('[data-nav="sync"]')
         self.page.fill('#sy-o', 'test')
         self.page.fill('#sy-r', 'data')
@@ -457,6 +527,75 @@ class TaktTest(unittest.TestCase):
         self.js('(t) => { commit(null, () => { state = migrate(JSON.parse(t)); }); }', bad)
         self.assertEqual(self.page.locator('.card.items img').count(), 0)
         self.assertIn('<img', self.page.locator('.card.items').inner_text())
+
+
+    # ---------- backup til Google Drive ----------
+    def test_drive_backup_and_restore_on_new_phone(self):
+        self.open()
+        self.page.click('#tab-more')
+        self.page.click('[data-nav="backup"]')
+        self.page.click('[data-nav="drive"]')
+        self.drive_connect(self.page, 'kort', 'kort')
+        self.assertIn('minst 6 tegn', self.sheet().inner_text())
+        self.drive_connect(self.page, 'hemmelig1')
+        self.page.wait_for_function('() => !!drive.cfg.lastBackup')
+        saved = self.google.only()
+        self.assertEqual(saved['format'], 'takt-kryptert')
+        self.assertNotIn('Dagvakt', json.dumps(saved), 'backupen er kryptert')
+        self.assertFalse(self.page.evaluate('() => location.hash'), 'tilgangsnøkkelen er fjernet fra adressen')
+        # Endringer lagres automatisk når appen legges bort
+        before = self.google.uploads
+        self.js("() => commit('', () => saveItem({ kind: 'note', title: 'Ny', date: '2026-10-05' }))")
+        self.js("() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); }")
+        self.page.wait_for_function('() => !drive.cfg.dirty')
+        self.assertEqual(self.google.uploads, before + 1)
+
+        # Ny telefon, feil kode først: ingenting lagres over backupen
+        pg = self.new_phone()
+        pg.click('[data-drive]')
+        self.drive_connect(pg, 'feilkode1')
+        pg.wait_for_selector('#sheet-root.open [data-retry]')
+        self.assertIn('Koden passer ikke', pg.inner_text('#sheet-root .sheet'))
+        self.assertEqual(self.google.uploads, before + 1)
+        pg.fill('#dr-c', 'hemmelig1')
+        pg.click('[data-retry]')
+        pg.wait_for_function('() => state.items.some(x => x.title === "Ny")')
+        self.assertEqual(pg.evaluate('() => state.rota.codes.D.label'), 'Dagvakt')
+        self.assertEqual(self.google.uploads, before + 1, 'gjenoppretting laster ikke opp noe')
+
+    def test_drive_asks_before_replacing_data(self):
+        self.open()
+        self.js("() => { drive.cfg = { on: true, code: 'hemmelig1', salt: 'AAAAAAAAAAAAAAAAAAAAAA==', token: 'tok9', exp: Date.now() + 3e6, fileId: '', lastBackup: '', lastError: '', dirty: true, pending: false }; }")
+        self.js('() => driveBackup()')
+        self.page.wait_for_function('() => !!drive.cfg.lastBackup')
+        self.js("() => commit('', () => { state.profile.name = 'Endret'; })")
+        self.js('() => driveRestoreAsk()')
+        self.page.wait_for_selector('[data-fetch]')
+        self.page.click('[data-fetch]')
+        self.page.wait_for_function("() => state.profile.name === 'Kari'")
+
+    def test_drive_login_reminder(self):
+        self.open()
+        self.js("() => { drive.cfg = { on: true, code: 'hemmelig1', salt: 'AAAAAAAAAAAAAAAAAAAAAA==', token: '', exp: 0, fileId: '', lastBackup: '2026-09-20T10:00:00Z', lastError: '', dirty: true, pending: false }; saveDrive(); render(); }")
+        self.assertIn('venter', self.page.inner_text('.card.notice'))
+        self.page.click('.card.notice [data-act="drive-login"]')
+        self.page.wait_for_load_state()
+        self.page.wait_for_function(READY)
+        self.page.wait_for_function('() => !drive.cfg.dirty')
+        self.assertEqual(self.page.locator('.card.notice').count(), 0)
+
+    def test_file_backup_with_share_sheet_and_reminder(self):
+        self.page.add_init_script("navigator.canShare = () => true; navigator.share = async d => { window.__shared = d.files[0].name; };")
+        self.open()
+        self.js("() => commit(null, () => { state.meta.created = '2026-09-01'; })")
+        self.assertIn('ikke tatt backup', self.page.inner_text('.card.notice'))
+        self.page.click('.card.notice [data-act="backup"]')
+        self.page.click('[data-nav="export"]')
+        self.page.wait_for_function('() => !!window.__shared')
+        self.assertEqual(self.js('() => window.__shared'), 'takt-backup-2026-10-05.json')
+        self.assertEqual(self.js('() => state.meta.lastExport'), '2026-10-05')
+        self.js('() => { closeSheet(); render(); }')
+        self.assertEqual(self.page.locator('.card.notice').count(), 0)
 
     # ---------- navigasjon, sveip og visning ----------
     def test_calendar_month_and_jump(self):

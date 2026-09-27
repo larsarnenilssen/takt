@@ -13,7 +13,7 @@
              overrides: { dato: KODE eller '' }, custom: { dato: { start, end, label } }, source },
      days: { dato: { from: stedId, to: stedId, pick: { to | home: { leave, arrive, sig } } } },
      items: [{ id, kind, date, time, title, note, done, shared, updated }],
-     settings: { theme, textSize, dognName }, meta: { created, setupDone } } */
+     settings: { theme, textSize, dognName }, meta: { created, setupDone, lastExport } } */
 const DATA_VERSION = 1;
 const SHIFT_KINDS = ['work', 'night', 'off'];
 const ITEM_KINDS = ['todo', 'appt', 'note', 'shop'];
@@ -32,7 +32,7 @@ function defaultState() {
     days: {},
     items: [],
     settings: { theme: 'auto', textSize: 1, dognName: '' },
-    meta: { created: todayISO(), setupDone: false },
+    meta: { created: todayISO(), setupDone: false, lastExport: '' },
   };
 }
 
@@ -126,5 +126,6 @@ function sanitize(o) {
   const m = obj(src.meta);
   s.meta.created = isDate(m.created) ? m.created : todayISO();
   s.meta.setupDone = !!m.setupDone;
+  s.meta.lastExport = isDate(m.lastExport) ? m.lastExport : '';
   return s;
 }

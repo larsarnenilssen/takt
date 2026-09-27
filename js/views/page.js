@@ -30,7 +30,7 @@ function renderHeader() {
 }
 
 function renderPage() {
-  setHtml($('#page'), [shiftCard(view), travelCard(view), homeCard(view), itemsCard(view)]);
+  setHtml($('#page'), [backupNotice(), shiftCard(view), travelCard(view), homeCard(view), itemsCard(view)]);
   fillTravel(view);
 }
 
