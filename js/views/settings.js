@@ -117,7 +117,8 @@ async function offerRestore(always) {
   if (!always || confirm(T.sync.restoreQ)) {
     commit(T.sync.restored, () => { state = data; state.meta.setupDone = true; });
     applyTheme();
-    if (sheetOpen() && !always) closeSheet();
+    // Mangler hjem eller arbeidssted (for eksempel i en startfil), fortsetter oppsettet der
+    if (!always) { if (!placeByRole('home') || !placeByRole('work')) openSetupSheet(2); else closeSheet(); }
   }
 }
 
