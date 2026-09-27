@@ -72,6 +72,7 @@ window.addEventListener('pagehide', flush);
 try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (state && state.settings.theme === 'auto') applyTheme(); }); } catch (e) {}
 
 (async () => {
+  rememberGithubLink();
   await store.init();
   await loadSync();
   await loadDognCache();

@@ -1,7 +1,7 @@
 {
   "name": "Takt",
   "short_name": "Takt",
-  "description": "Turnus, reise og hjemme – dag for dag",
+  "description": "Turnus, reise og gjøremål – dag for dag",
   "lang": "nb",
   "start_url": "./",
   "scope": "./",

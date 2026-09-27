@@ -4,7 +4,8 @@ function openItemSheet(id, date) {
   const cur = id ? state.items.find(x => x.id === id) : null;
   const x = cur ? { ...cur } : { id: uid(), kind: 'todo', date: date || view, time: '', end: '', title: '', note: '', done: false, shared: false, cal: true };
   const canShare = syncOn() && sync.cfg.share;
-  const kinds = ITEM_KINDS.map(k => [k, T.items.kind[k]]);
+  // Handling hører til handlelisten i Døgn, og vises bare når Døgn er koblet til (eller punktet allerede er handling)
+  const kinds = ITEM_KINDS.filter(k => k !== 'shop' || dognOn() || x.kind === 'shop').map(k => [k, T.items.kind[k]]);
   openSheet(h`${sheetHead(cur ? T.items.editTitle : T.items.newTitle)}<div class="sh-body">
     <section class="grp">${segRow('data-kind', kinds, k => k === x.kind)}
       <label class="field"><span id="it-tl">${T.items.titleLabel[x.kind]}</span><input type="text" id="it-t" value="${x.title}" maxlength="200" enterkeyhint="done"></label>

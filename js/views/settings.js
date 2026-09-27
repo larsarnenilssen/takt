@@ -24,7 +24,7 @@ function openProfileSheet(back) {
   const S = state.settings;
   openSheet(h`${sheetHead(T.profile.title, !!back)}<div class="sh-body">
     <section class="grp"><label class="field"><span>${T.profile.name}</span><input type="text" id="pf-n" value="${state.profile.name}" placeholder="${T.profile.namePh}"></label>
-      <label class="field"><span>${T.profile.dognName}</span><input type="text" id="pf-d" value="${S.dognName}" placeholder="${T.home.dognDefault}"></label>${hint(T.profile.dognNameHint)}</section>
+      ${dognOn() ? h`<label class="field"><span>${T.profile.dognName}</span><input type="text" id="pf-d" value="${S.dognName}" placeholder="${T.home.dognDefault}"></label>${hint(T.profile.dognNameHint)}` : ''}</section>
     <section class="grp"><h3>${T.profile.theme}</h3>${segRow('data-theme', THEMES.map(t => [t, T.profile.themes[t]]), t => t === S.theme)}
       <h3 class="sub">${T.profile.textSize}</h3>${segRow('data-size', TEXT_SIZES.map(z => [z, T.profile.sizes[TEXT_SIZES.indexOf(z)]]), z => Number(z) === S.textSize)}</section>
   </div>${sheetFoot(T.common.save)}`, (sheet, q) => {
@@ -33,7 +33,7 @@ function openProfileSheet(back) {
     sheet.querySelectorAll('[data-theme]').forEach(b => b.addEventListener('click', () => { commit('', () => { S.theme = b.dataset.theme; }); applyTheme(); sheet.querySelectorAll('[data-theme]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
     sheet.querySelectorAll('[data-size]').forEach(b => b.addEventListener('click', () => { commit('', () => { S.textSize = Number(b.dataset.size); }); applyTheme(); sheet.querySelectorAll('[data-size]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
     q('[data-save]').addEventListener('click', () => {
-      commit(T.common.saved, () => { state.profile.name = str(q('#pf-n').value.trim(), 60); S.dognName = str(q('#pf-d').value.trim(), 40); });
+      commit(T.common.saved, () => { state.profile.name = str(q('#pf-n').value.trim(), 60); const d = q('#pf-d'); if (d) S.dognName = str(d.value.trim(), 40); });
       if (back) back(); else closeSheet();
     });
   }, () => openProfileSheet(back));
@@ -46,7 +46,7 @@ function openSyncSheet(back) {
     openSheet(h`${sheetHead(T.sync.title, !!back)}<div class="sh-body">
       ${hint(T.sync.intro)}
       <section class="grp"><label class="field"><span>${T.sync.owner}</span><input type="text" id="sy-o" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
-        <label class="field"><span>${T.sync.repo}</span><input type="text" id="sy-r" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="dogn-data"></label>
+        <label class="field"><span>${T.sync.repo}</span><input type="text" id="sy-r" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="repo"></label>
         <label class="field"><span>${T.sync.token}</span><input type="password" id="sy-t" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
         ${hint(T.sync.tokenHint)}
         <label class="field"><span>${T.sync.expires}</span><input type="date" id="sy-x"></label>${hint(T.sync.expiresHint)}${errBox()}</section>
@@ -131,13 +131,14 @@ function openSetupSheet(step = 1) {
     openSheet(h`${sheetHead(T.setup.welcome)}<div class="sh-body">${dots}
       <p class="lead">${T.setup.intro}</p>
       <section class="grp"><label class="field"><span>${T.profile.name}</span><input type="text" id="su-n" value="${state.profile.name}" placeholder="${T.profile.namePh}"></label></section>
-      <section class="grp quiet"><h3>${T.setup.haveData}</h3><div class="btnrow">${googleReady() ? h`<button type="button" class="btn small" data-drive>${T.setup.fromDrive}</button>` : ''}<button type="button" class="btn small" data-file>${T.setup.fromFile}</button><button type="button" class="btn small" data-gh>${T.setup.fromGithub}</button></div></section>
+      <section class="grp quiet"><h3>${T.setup.haveData}</h3><div class="btnrow">${googleReady() ? h`<button type="button" class="btn small" data-drive>${T.setup.fromDrive}</button>` : ''}<button type="button" class="btn small" data-file>${T.setup.fromFile}</button>${githubVisible() ? h`<button type="button" class="btn small" data-gh>${T.setup.fromGithub}</button>` : ''}</div></section>
     </div>${sheetFoot(T.setup.next)}`, (sheet, q) => {
       q('[data-save]').addEventListener('click', () => { commit(null, () => { state.profile.name = str(q('#su-n').value.trim(), 60); }); next(); });
       q('[data-file]').addEventListener('click', importBackupFile);
       const dr = q('[data-drive]');
       if (dr) dr.addEventListener('click', () => openDriveSheet(again));
-      q('[data-gh]').addEventListener('click', () => openSyncSheet(again));
+      const gh = q('[data-gh]');
+      if (gh) gh.addEventListener('click', () => openSyncSheet(again));
     }, again);
   } else if (step === 2) {
     const row = r => { const p = placeByRole(r); return h`<button type="button" class="row" data-role="${r}"><span class="grow">${T.places.role[r]}<span class="m">${p ? p.label : T.places.notChosen}</span></span><span class="chev">›</span></button>`; };

@@ -12,6 +12,14 @@ const SHARE_DELAY = 20 * 1000;          // deling: venter litt, så flere endrin
 const PULL_INTERVAL = 5 * 60 * 1000;    // henter dagen hjemme så ofte mens appen er åpen
 const sync = { cfg: null, timer: null, shareTimer: null, busy: false };
 const syncOn = () => !!(sync.cfg && sync.cfg.token && sync.cfg.owner && sync.cfg.repo);
+/* GitHub og alt som hører til Døgn (deling, handling, dagen hjemme) vises bare for dem som bruker det:
+   når GitHub er koblet til, eller når appen er åpnet med ?github i adressen (husket på telefonen).
+   Andre ser en app uten spor av Døgn. */
+const GITHUB_FLAG = 'takt-github';
+function rememberGithubLink() {
+  try { if (new URLSearchParams(location.search).has('github')) localStorage.setItem(GITHUB_FLAG, '1'); } catch (e) {}
+}
+const githubVisible = () => { if (syncOn()) return true; try { return localStorage.getItem(GITHUB_FLAG) === '1'; } catch (e) { return false; } };
 const dognOn = () => syncOn() && sync.cfg.dogn;
 
 async function loadSync() { sync.cfg = (await store.get('sync')) || null; }

@@ -12,7 +12,7 @@ function openBackupSheet(back) {
     ${hint(T.backup.intro)}
     ${googleReady() ? h`<section class="grp"><h3>${T.drive.title}</h3><div class="rows">${navRow('drive', driveOn() ? T.drive.title : T.drive.connect, driveOn() ? backupStatus() : T.drive.meta)}</div></section>` : ''}
     <section class="grp"><h3>${T.backup.file}</h3><div class="rows">${navRow('export', T.backup.saveFile, T.backup.saveFileMeta)}${navRow('import', T.backup.readFile, T.backup.readFileMeta)}</div></section>
-    <section class="grp quiet"><h3>${T.backup.advanced}</h3><div class="rows">${navRow('sync', T.sync.title, syncOn() ? T.sync.connectedTo(sync.cfg.repo) : T.sync.off, true)}</div></section>
+    ${githubVisible() ? h`<section class="grp quiet"><h3>${T.backup.advanced}</h3><div class="rows">${navRow('sync', T.sync.title, syncOn() ? T.sync.connectedTo(sync.cfg.repo) : T.sync.off, true)}</div></section>` : ''}
   </div>`, (sheet, q) => {
     bindBack(sheet, back);
     const nav = (k, fn) => { const b = q('[data-nav="' + k + '"]'); if (b) b.addEventListener('click', fn); };

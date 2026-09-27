@@ -230,7 +230,7 @@ SEED_JS = """() => commit(null, () => {
   state.settings.dognName = 'Ola';
   state.places = [
     { id: 'h', role: 'home', name: 'Hjem', label: 'Testveien 1, Bergen', lat: 60.33, lon: 5.36, note: '' },
-    { id: 'w', role: 'work', name: 'Sykehuset', label: 'Sykehusveien 2, Bergen', lat: 60.37, lon: 5.35, note: 'Post 4' },
+    { id: 'w', role: 'work', name: 'Sykehuset', label: 'Sykehusveien 2, Bergen', lat: 60.37, lon: 5.35, note: 'Avdeling 2' },
     { id: 'k', role: '', name: 'Kurs', label: 'Kursveien 3, Bergen', lat: 60.39, lon: 5.32, note: '' } ];
   state.rota.codes = {
     D: { label: 'Dagvakt', kind: 'work', start: '07:00', end: '15:00' },
@@ -244,7 +244,7 @@ SEED_JS = """() => commit(null, () => {
 })"""
 
 DOGN_FILE = {
-    'format': 'dogn-deling', 'v': 1, 'updated': '2026-10-05T05:55:00+02:00', 'kidsWord': 'guttene',
+    'format': 'dogn-deling', 'v': 1, 'updated': '2026-10-05T05:55:00+02:00', 'kidsWord': 'barna',
     'kids': [{'id': 'a', 'name': 'Per'}, {'id': 'b', 'name': 'Pål'}],
     'days': {'2026-10-05': {
         'blocks': [{'start': '05:00', 'end': '06:30', 'title': 'Natt', 'type': 'sleep'},
@@ -253,7 +253,7 @@ DOGN_FILE = {
                    {'start': '08:15', 'end': '08:45', 'title': 'Frokost', 'type': 'meal', 'meal': 'Havregrøt'}],
         'sleep': [],
         'dinner': {'dish': 'Fiskegrateng', 'partnerEats': True},
-        'appts': [{'title': 'Helsestasjon', 'start': '13:00', 'where': 'Nesttun'}], 'sick': []},
+        'appts': [{'title': 'Helsestasjon', 'start': '13:00', 'where': 'Bydelshuset'}], 'sick': []},
         '2026-10-04': {'blocks': [], 'sleep': [{'kid': 'a', 'start': '19:10', 'end': '', 'night': True}, {'kid': 'b', 'start': '19:20', 'end': '', 'night': True}], 'appts': [], 'sick': []}},
     'shop': ['Melk'], 'acks': {},
 }
@@ -513,6 +513,7 @@ class TaktTest(unittest.TestCase):
 
     # ---------- backup og deling ----------
     def connect(self):
+        self.js("() => localStorage.setItem('takt-github', '1')")
         self.page.click('#tab-more')
         self.page.click('[data-nav="backup"]')
         self.page.click('[data-nav="sync"]')
@@ -547,7 +548,7 @@ class TaktTest(unittest.TestCase):
         self.connect()
         self.js('() => { closeSheet(); render(); }')
         home = self.page.locator('.card.home').inner_text()
-        self.assertIn('Guttene sover · siden 19:10', home)
+        self.assertIn('Barna sover · siden 19:10', home)
         self.assertIn('Frokost', home)
         self.assertIn('Fiskegrateng', home)
         self.assertIn('du spiser med', home)
@@ -562,9 +563,9 @@ class TaktTest(unittest.TestCase):
         self.js("() => commit('', () => saveItem({ kind: 'note', title: 'Husk', date: '2026-10-05' }))")
         self.gh.files['takt-backup.json'] = json.dumps(self.js('() => state'))
         self.js("() => { localStorage.clear(); indexedDB.deleteDatabase('takt'); }")
-        ctx2 = self.page
-        ctx2.goto(self.base)
-        ctx2.wait_for_function(READY)
+        # GitHub vises bare på telefoner som er åpnet med ?github
+        self.page.goto(self.base + '?github')
+        self.page.wait_for_function(READY)
         self.page.wait_for_selector('#sheet-root.open')
         self.page.click('[data-gh]')
         self.page.fill('#sy-o', 'test')
@@ -774,6 +775,44 @@ class TaktTest(unittest.TestCase):
         self.assertEqual(self.js('() => sync.cfg.expires'), '2027-10-05')
         self.js('() => { closeSheet(); render(); }')
         self.assertEqual(self.page.locator('.card.notice').count(), 0)
+
+
+    # ---------- uten GitHub: ingen spor av Døgn, deling eller handling ----------
+    def test_no_dogn_features_for_other_users(self):
+        self.open(seed=False)
+        self.page.wait_for_selector('#sheet-root.open')
+        self.assertEqual(self.page.locator('[data-gh]').count(), 0, 'ingen GitHub i oppsettet')
+        self.js('() => { commit(null, () => { state.meta.setupDone = true; }); closeSheet(); }')
+        self.page.wait_for_timeout(300)
+        self.page.click('#tab-add')
+        kinds = self.page.locator('[data-kind]').evaluate_all('els => els.map(e => e.dataset.kind)')
+        self.assertEqual(kinds, ['todo', 'appt', 'note'], 'ingen handling')
+        self.assertEqual(self.page.locator('[data-share]').count(), 0, 'ingen deling')
+        self.js('() => closeSheet()')
+        self.page.wait_for_timeout(300)
+        self.page.click('#tab-more')
+        self.page.click('[data-nav="profile"]')
+        self.assertEqual(self.page.locator('#pf-d').count(), 0, 'ingen Døgn-navn')
+        self.page.click('[data-goback]')
+        self.page.click('[data-nav="backup"]')
+        self.assertEqual(self.page.locator('[data-nav="sync"]').count(), 0, 'ingen GitHub i backup')
+        self.assertEqual(self.page.locator('.card.home').count(), 0)
+        # Ingen spor i noen av arkene i menyen
+        texts = [self.page.inner_text('body')]
+        for nav in ['rota', 'places', 'profile', 'calendar', 'backup']:
+            self.js('() => openMenu()')
+            self.page.click(f'[data-nav="{nav}"]')
+            texts.append(self.sheet().inner_text())
+        for word in ['Døgn', 'GitHub', 'Handl', 'hjemme', 'Lars']:
+            self.assertFalse(any(word in t for t in texts), word)
+        # Med ?github i adressen (for dem som bruker Døgn) kommer valget fram og huskes
+        self.page.goto(self.base + '?github')
+        self.page.wait_for_function(READY)
+        self.page.goto(self.base)
+        self.page.wait_for_function(READY)
+        self.page.click('#tab-more')
+        self.page.click('[data-nav="backup"]')
+        self.assertEqual(self.page.locator('[data-nav="sync"]').count(), 1)
 
     # ---------- navigasjon, sveip og visning ----------
     def test_calendar_month_and_jump(self):

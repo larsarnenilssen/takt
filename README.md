@@ -2,9 +2,7 @@
 
 Takt samler turnusen, reisen til og fra jobb og det du vil huske, dag for dag.
 Appen er laget for turnusarbeidere og kan brukes av hvem som helst: adresser,
-arbeidssted, vaktkoder og navn legges inn i appen. Hun som bruker den, kan også
-koble den til Døgn, slik at hun ser hva som skjer hjemme, og Døgn ser vaktene
-og når hun er borte.
+arbeidssted, vaktkoder og navn legges inn i appen.
 
 Appen er en nettside som legges på hjemskjermen og virker uten nett. Alt du legger
 inn, lagres på telefonen din. Andre som åpner samme adresse, får sin egen, tomme app.
@@ -20,10 +18,7 @@ inn, lagres på telefonen din. Andre som åpner samme adresse, får sin egen, to
   vakt vises den siste reisen som er fram i tide; hjem den første etter at vakten er
   slutt. Favorittlinjer (for eksempel 16E, 20 eller 1 + 5) vises først. **Velg** en reise
   for dagen, så brukes den til å regne ut når du er borte.
-- **Hjemme** (valgfritt): dagen i Døgn – hvem som sover, hva som skjer nå og snart,
-  middag og avtaler.
-- **Notater og gjøremål:** gjøremål, avtaler, notater og ting som skal kjøpes. Punkter
-  merket «delt» vises i Døgn, og handling havner på handlelisten der.
+- **Notater og gjøremål:** gjøremål, avtaler og notater, for en dag eller til de er gjort.
 - **Måned:** turnusen i kalender, med ukenummer.
 - **Kalender** (valgfritt): vaktene, og avtaler som er merket for det, i en egen kalender i Google-kalenderen,
   eller som kalenderfil (.ics).
@@ -39,13 +34,13 @@ inn, lagres på telefonen din. Andre som åpner samme adresse, får sin egen, to
 | `js/version.js` | Versjonsnummer og listen over filer som lagres for bruk uten nett |
 | `js/migrate.js`, `js/store.js` | Datastruktur, oppgradering og kontroll av data, lagring og angre |
 | `js/config.js` | Klient-ID for Google Drive (se «For den som legger ut appen») |
-| `js/domain/` | Regler: turnus, steder, reiser (Entur), notater, hjemme (Døgn), backup til Google Drive og GitHub |
+| `js/domain/` | Regler: turnus, steder, reiser (Entur), notater, kalender, backup til Google Drive og GitHub |
 | `js/import/` | Lesing av turnus fra PDF: finne tabellen, lese rutene, tekstgjenkjenning |
 | `js/views/` | Det som vises: siden, arkene og sveiping |
 | `js/app.js` | Knapper og oppstart |
 | `sw.js` | Gjør at appen virker uten nett |
 | `vendor/` | pdf.js og Tesseract for PDF-import (se `vendor/README.md`) |
-| `docs/deling.md` | Formatet på filene som deles med Døgn |
+| `docs/` | Oppsett av GitHub-backup (`github.md`) og formatet på filene som deles (`deling.md`) |
 | `personvern.html` | Hva som lagres hvor |
 | `tests/` | Automatiske tester og en oppdiktet turnus-PDF |
 
@@ -59,7 +54,7 @@ Last aldri opp turnus-PDF-er, backupfiler eller andre personlige filer hit. Repo
 
 Første gang kommer et kort oppsett: navn, hjem og arbeidssted (søk etter adresse, eller stå ved
 inngangen og trykk **Bruk der jeg er nå**), minutter før og etter vakten, import av turnus og backup.
-Har du brukt Takt før, velger du **Hent fra Google Drive**, **Hent fra fil** eller **GitHub** i første steg.
+Har du brukt Takt før, velger du **Hent fra Google Drive** eller **Hent fra fil** i første steg.
 
 ## 2. Turnus
 
@@ -71,7 +66,7 @@ Har du brukt Takt før, velger du **Hent fra Google Drive**, **Hent fra fil** el
 - **Ta med fra** bestemmer hvor den nye turnusen begynner. **Behold dager jeg har endret selv** står på.
 
 Vaktkodene kan endres under **Mer › Turnus › Vaktkoder**. **Del turnusfil** lager en fil kolleger kan
-importere under **Importer turnusfil**. Døgn leser den samme filen.
+importere under **Importer turnusfil**.
 
 ## 3. Backup
 
@@ -86,7 +81,7 @@ Alt lagres på telefonen. Under **Mer › Backup** velger hver bruker selv hvord
 - **Fil:** **Lagre backup som fil** åpner delingsmenyen på telefonen, så filen kan legges i Drive, sendes
   på e-post eller lagres i Filer. **Hent backup fra fil** leser den inn igjen. Har brukeren ingen backup,
   minner appen om det etter to uker.
-- **GitHub og Døgn (avansert):** Backup til et privat GitHub-repo, og deling med Døgn. Se punkt 5.
+- **GitHub (avansert):** Backup til et privat GitHub-repo. Valget er skjult i appen; se `docs/github.md`.
 
 Se også [personvern.html](personvern.html).
 
@@ -109,27 +104,6 @@ sanntiden til Skyss. **Endre sted** på reisen gjelder bare den dagen, for eksem
 
 Når du er borte, regnes ut fra: 1) reisen du har valgt for dagen, 2) reisetiden du har skrevet inn,
 3) den raskeste reisen Takt har funnet.
-
-## 5. Backup og deling med Døgn via GitHub (avansert)
-
-Takt bruker det samme private repoet som Døgn (for eksempel `dogn-data`). Hver app skriver bare sine
-egne filer, se `docs/deling.md`.
-
-1. Lag en egen tilgangsnøkkel for telefonen: profilbildet på github.com → **Settings →
-   Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
-   - Navn: `Takt`. Utløp: for eksempel 1 år.
-   - **Repository access → Only select repositories** → `dogn-data`.
-   - **Permissions → Repository permissions → Contents → Read and write**.
-   - **Generate token**, og kopier nøkkelen (starter med `github_pat_`).
-2. I Takt: **Mer › Backup › Backup og deling med Døgn**. Fyll inn brukernavn, repo og nøkkel, og trykk **Koble til**.
-
-Takt tar da backup (høyst én gang i timen), sender turnus, fravær og delte punkter til Døgn, og henter
-dagen hjemme hvert femte minutt mens appen er åpen. Hvert valg kan slås av. Nøkkelen lagres bare på
-telefonen. Merk: Den som eier repoet, kan lese alle filene i det, også backupen.
-
-Fine-grained-nøkler utløper. Skriv inn utløpsdatoen når du kobler til (den står på GitHub), så varsler Takt
-på forsiden to uker før. Slutter GitHub å virke, vises det også på forsiden. En ny nøkkel limes inn under
-**Tilgangsnøkkel** i samme meny; resten beholdes.
 
 ## For den som legger ut appen: Google Drive
 
@@ -170,7 +144,7 @@ oppgraderes dataene automatisk første gang den nye versjonen åpnes.
 - **Endringer i data** går alltid gjennom `commit()` i `js/store.js`: lagrer, merker for backup og deling, tegner på nytt og kan angres.
 - **HTML** lages med `h`…`` fra `js/util.js`, som escaper alle verdier. Alt som leses inn, kontrolleres av `sanitize()` i `js/migrate.js`.
 - **Ny fil:** Legg den inn i `index.html` og i `APP_FILES` i `js/version.js`. Øk `APP_VERSION` ved hver utgivelse.
-- **Deling med Døgn:** Endringer i filformatet beskrives i `docs/deling.md` i begge repoene.
+- **Filformat for deling:** Endringer beskrives i `docs/deling.md`.
 - **Tester:** `python3 -m unittest discover -s tests -v` (krever `pip install playwright` og
   `python -m playwright install chromium`). Testene kjøres også på GitHub under **Actions** ved hver endring.
   De sjekker også at det ikke finnes ubrukte funksjoner, tekster, fargevariabler eller CSS-klasser,

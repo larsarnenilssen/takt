@@ -1,6 +1,6 @@
 # Deling mellom Takt og Døgn (format versjon 1)
 
-Takt og Døgn deler data gjennom et privat GitHub-repo (for eksempel `dogn-data`).
+Takt og Døgn deler data gjennom et privat GitHub-repo (se `github.md`).
 Hver app skriver bare sine egne filer. Derfor kan ingen av dem overskrive det
 den andre har lagret, og ingen endringer må flettes sammen. Tilgangsnøkler
 står aldri i filene.
@@ -54,13 +54,13 @@ Alle datoer skrives som `ÅÅÅÅ-MM-DD` og alle klokkeslett som `TT:MM`, i loka
 ```json
 {
   "format": "dogn-deling", "v": 1, "updated": "2026-10-05T05:55:00.000Z",
-  "kidsWord": "guttene", "kids": [{ "id": "a", "name": "Per" }, { "id": "b", "name": "Pål" }],
+  "kidsWord": "barna", "kids": [{ "id": "a", "name": "Per" }, { "id": "b", "name": "Pål" }],
   "days": {
     "2026-10-05": {
       "blocks": [{ "start": "08:15", "end": "08:45", "title": "Frokost", "type": "meal", "meal": "Havregrøt" }],
       "sleep": [{ "kid": "a", "start": "09:20", "end": "", "night": false }],
       "dinner": { "dish": "Fiskegrateng", "partnerEats": true },
-      "appts": [{ "title": "Helsestasjon", "start": "13:00", "where": "Nesttun" }],
+      "appts": [{ "title": "Helsestasjon", "start": "13:00", "where": "Bydelshuset" }],
       "sick": []
     }
   },
