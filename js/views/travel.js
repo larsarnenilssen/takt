@@ -13,6 +13,7 @@ function openTripSheet(date, dir, trip) {
         ${l.mode !== 'foot' && l.aimed && minutesBetween(l.aimed, l.start) > 1 ? h`<span class="m warn"> · ${T.travel.late(minutesBetween(l.aimed, l.start))}</span>` : ''}
         ${l.cancelled ? h`<span class="m warn"> · ${T.travel.cancelled}</span>` : ''}</span></li>`)}
       <li class="end"><span class="t">${hm(trip.end)}</span><span class="grow">${T.trip.arrive}</span></li></ol>
+    ${trip.sits.length ? h`<section class="grp"><h3>${T.trip.sits}</h3>${trip.sits.map(x => h`<p class="flag note">${x.text}${x.more && x.more !== x.text ? h`<small>${x.more}</small>` : ''}</p>`)}</section>` : ''}
     ${hint(T.trip.pickHint + (syncOn() && sync.cfg.share ? T.trip.pickHintShare : ''))}
     <div class="btnrow"><button type="button" class="btn${picked ? '' : ' primary'}" data-pick>${picked ? T.trip.unpick : T.trip.pick}</button>
       ${trip.sig && !isFav ? h`<button type="button" class="btn" data-fav>${ICON.starOff}<span>${T.trip.saveFav}</span></button>` : ''}</div>

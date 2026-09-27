@@ -43,7 +43,7 @@ Alle datoer skrives som `ÅÅÅÅ-MM-DD` og alle klokkeslett som `TT:MM`, i loka
 - `away`: når hun er borte hjemmefra på vaktdager, fra en uke tilbake til tre måneder fram.
   `leave` er når hun går hjemmefra, `back` når hun er hjemme igjen, og `backDay` er antall
   dager etter datoen hun kommer hjem (1 etter nattevakt). `chosenTo` og `chosenHome` er `true`
-  når hun har valgt reisen den veien. Ellers er tiden beregnet: vakten ± tiden før/etter vakten
+  når hun har valgt reisen den veien. En valgt reise følges opp med sanntid, så tidene endres når den blir forsinket. Ellers er tiden beregnet: vakten ± tiden før/etter vakten
   ± reisetid, der reisetiden er den hun har skrevet inn (`basis: "set"`) eller den raskeste
   reisen Takt har funnet (`basis: "fastest"`).
 - `items`: punkter hun har merket «delt». `kind` er `todo`, `appt`, `note` eller `shop`.

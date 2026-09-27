@@ -11,7 +11,7 @@
                favorites: [{ id, lines: [{ code, id, mode }] }] },
      rota: { codes: { KODE: { label, kind, start, end } }, shifts: { dato: KODE } (fra import),
              overrides: { dato: KODE eller '' }, custom: { dato: { start, end, label } }, source },
-     days: { dato: { from: stedId, to: stedId, pick: { to | home: { leave, arrive, sig } } } },
+     days: { dato: { from: stedId, to: stedId, pick: { to | home: { leave, arrive, sig, legs?, walk?, live? } } } },
      items: [{ id, kind, date, time, end, title, note, done, shared, cal, updated }],
      settings: { theme, textSize, dognName }, meta: { created, setupDone, lastExport } } */
 const DATA_VERSION = 1;
@@ -51,6 +51,19 @@ const isCode = c => typeof c === 'string' && CODE_RE.test(c);
 function cleanCode(def) {
   const d = obj(def);
   return { label: str(d.label, 60), kind: SHIFT_KINDS.includes(d.kind) ? d.kind : 'work', start: isTime(d.start) ? d.start : '', end: isTime(d.end) ? d.end : '' };
+}
+const isStamp = v => typeof v === 'string' && !isNaN(Date.parse(v));
+/* Valgt reise: tidene, linjene, etappene hos Entur, gangtiden før og etter, og sanntid (live) */
+function cleanPick(t) {
+  const p = { leave: str(t.leave, 40), arrive: str(t.arrive, 40), sig: str(t.sig, 40) };
+  const legs = arr(t.legs).filter(x => typeof x === 'string' && x).map(x => x.slice(0, 300)).slice(0, 6), walk = arr(t.walk);
+  if (legs.length && walk.length === 2) Object.assign(p, { legs, walk: walk.map(m => Math.round(num(m, 0, 0, 120))) });
+  const L = obj(t.live);
+  if (p.legs && isStamp(L.leave) && isStamp(L.arrive)) p.live = {
+    leave: str(L.leave, 40), arrive: str(L.arrive, 40), delay: Math.round(num(L.delay, 0, -300, 600)), cancelled: L.cancelled === true, missed: L.missed === true,
+    sits: arr(L.sits).map(obj).filter(x => str(x.text)).slice(0, 5).map(x => ({ id: str(x.id, 100), text: str(x.text, 200), more: str(x.more, 600) })),
+  };
+  return p;
 }
 function cleanPlace(p) {
   p = obj(p);
@@ -111,7 +124,7 @@ function sanitize(o) {
     const pick = {};
     for (const dir of ['to', 'home']) {
       const t = obj(obj(x.pick)[dir]);
-      if (!isNaN(Date.parse(t.leave)) && !isNaN(Date.parse(t.arrive))) pick[dir] = { leave: str(t.leave, 40), arrive: str(t.arrive, 40), sig: str(t.sig, 40) };
+      if (!isNaN(Date.parse(t.leave)) && !isNaN(Date.parse(t.arrive))) pick[dir] = cleanPick(t);
     }
     if (Object.keys(pick).length) rec.pick = pick;
     if (Object.keys(rec).length) s.days[d] = rec;

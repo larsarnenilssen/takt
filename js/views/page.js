@@ -95,6 +95,7 @@ async function fillTravel(date) {
     const box = document.getElementById('trips-' + dir);
     if (!box) continue;
     let res;
+    followPick(date, dir);
     try { res = await planTrips(date, dir); }
     catch (e) { if (view === date && box.isConnected) setHtml(box, h`<p class="hint warn">${e instanceof UserError ? e.message : T.travel.failed}</p>`); continue; }
     if (view !== date || !box.isConnected || !res) continue;
@@ -107,29 +108,42 @@ async function fillTravel(date) {
     const open = moreTrips.has(dir);
     const hidden = list.length - keep;
     setHtml(box, list.length
-      ? h`${list.map((x, i) => i < keep || open ? tripRow(date, dir, x.trip, i, x.fav) : '')}
+      ? h`${flagLinesHtml(tripAlerts(date, dir, list.map(x => x.trip)))}${list.map((x, i) => i < keep || open ? tripRow(date, dir, x.trip, i, x.fav) : '')}
         ${hidden > 0 ? h`<button type="button" class="linkish" data-more="${dir}">${open ? T.travel.fewer : T.travel.more(hidden)}</button>` : ''}<p class="stamp">${res.stale ? T.travel.offline(fmtStamp(new Date(res.at))) : T.travel.fetched(hm(new Date(res.at)))}
           <button type="button" class="linkish" data-act="refresh">${ICON.refresh}<span>${T.travel.refresh}</span></button></p>`
       : h`<p class="hint">${T.travel.noTrips}</p>`);
   }
+}
+/* Linjene for den valgte reisen, med forslag om en annen reise når den ikke holder */
+function tripAlerts(date, dir, trips) {
+  const lines = pickAlerts(date, dir);
+  if (lines.some(l => l.level === 'high')) {
+    const alt = trips.find(t => !isPicked(date, dir, t) && Date.parse(leaveAt(t)) >= Date.now());
+    if (alt) lines[0].text += ' ' + T.travel.alert.instead(hm(leaveAt(alt)), alt.sig.replace(/\+/g, ' + ') || T.travel.alert.walkOnly, hm(alt.end));
+  }
+  return lines;
 }
 const legChips = trip => trip.legs.map(l => l.mode === 'foot'
   ? h`<span class="leg walk" title="${T.travel.walkMin(l.min)}">${ICON.walk}<span>${l.min}</span></span>`
   : h`<span class="leg ride${l.cancelled ? ' cancelled' : ''}">${l.code || T.travel.mode[l.mode] || l.mode}</span>`);
 function tripRow(date, dir, trip, i, fav) {
   const picked = isPicked(date, dir, trip);
-  const delay = delayOf(trip);
+  // Den valgte reisen viser tidene fra oppfølgingen med sanntid, som kan være nyere enn søket
+  const lv = picked ? pickOf(date, dir).live : null;
+  const leave = lv ? lv.leave : leaveAt(trip), end = lv ? lv.arrive : trip.end;
+  const delay = lv ? lv.delay : delayOf(trip), cancelled = lv ? lv.cancelled : trip.legs.some(l => l.cancelled);
   const need = travelNeed(date, dir);
-  const slack = dir === 'to' ? minutesBetween(trip.end, need.target) : null;
+  const slack = dir === 'to' ? minutesBetween(end, need.target) : null;
   const meta = [
-    dir === 'to' ? (slack > 0 ? T.travel.slack(slack) : T.travel.onTime) : T.travel.arrive(hm(trip.end)),
+    dir === 'to' ? (slack > 0 ? T.travel.slack(slack) : slack < 0 ? T.travel.tooLate(-slack) : T.travel.onTime) : T.travel.arrive(hm(end)),
     delay > 1 ? T.travel.late(delay) : delay < -1 ? T.travel.early(-delay) : '',
-    trip.legs.some(l => l.cancelled) ? T.travel.cancelled : '',
+    cancelled ? T.travel.cancelled : '',
+    trip.sits.length ? T.travel.hasSit : '',
   ].filter(Boolean).join(' · ');
   return h`<div class="trip${picked ? ' picked' : ''}${fav ? ' fav' : ''}">
     <button type="button" class="tr-main" data-trip="${dir}:${i}">
-      <span class="tr-when"><b>${hm(leaveAt(trip))}</b><span>${T.travel.arrShort(hm(trip.end))}</span></span>
-      <span class="tr-body"><span class="legs">${legChips(trip)}</span><span class="tr-meta${delay > 1 || trip.legs.some(l => l.cancelled) ? ' warn' : ''}">${meta}</span></span></button>
+      <span class="tr-when"><b>${hm(leave)}</b><span>${T.travel.arrShort(hm(end))}</span></span>
+      <span class="tr-body"><span class="legs">${legChips(trip)}</span><span class="tr-meta${delay > 1 || slack < 0 || cancelled || trip.sits.length ? ' warn' : ''}">${meta}</span></span></button>
     <button type="button" class="pick" data-pick="${dir}:${i}" aria-pressed="${picked}">${picked ? T.travel.picked : T.travel.pick}</button></div>`;
 }
 

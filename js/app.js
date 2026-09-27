@@ -52,7 +52,7 @@ $('#page').addEventListener('click', e => {
   }
 });
 
-/* Hver halve minutt: ny dag ved midnatt, oppdaterte reiser og dagen hjemme */
+/* Hver halve minutt: ny dag ved midnatt, oppdaterte reiser (også den valgte, med sanntid) og dagen hjemme */
 function tick() {
   if (!state) return;
   const t = todayISO();
@@ -61,7 +61,7 @@ function tick() {
     lastToday = t;
     if (syncOn()) markDirty(true);   // fraværet som sendes til Døgn, følger datoen
   }
-  if (!document.hidden) { maybePullDogn(); if (!sheetOpen()) render(); }
+  if (!document.hidden) { maybePullDogn(); followPicks(); if (!sheetOpen()) render(); }
 }
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) { tick(); return; }

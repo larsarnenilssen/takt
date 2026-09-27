@@ -112,7 +112,14 @@ Se også [personvern.html](personvern.html).
 ganghastighet, reisetid én vei og favorittlinjer. Reisene hentes fra Entur, som har rutene og
 sanntiden til Skyss. **Endre sted** på reisen gjelder bare den dagen, for eksempel et kurs et annet sted.
 
-Når du er borte, regnes ut fra: 1) reisen du har valgt for dagen, 2) reisetiden du har skrevet inn,
+Tidene er forventede tider fra Entur, med sanntid der Skyss har det. Innstilte avganger tas ikke med.
+
+**Valgt reise følges opp:** Fra tre timer før reisen til den er over, henter Takt den valgte reisen med sanntid
+høyst hvert minutt mens appen er åpen. Blir den forsinket, står det en gul linje øverst med når du må gå. Er den
+innstilt, rekker du ikke byttet, eller kommer du for sent til vakten, blir linjen rød med forslag om neste reise
+som passer. Avviksmeldinger fra Skyss (stengt holdeplass, omkjøring) vises på reisen, og i detaljene.
+
+Når du er borte, regnes ut fra: 1) reisen du har valgt for dagen (med sanntid), 2) reisetiden du har skrevet inn,
 3) den raskeste reisen Takt har funnet.
 
 ## For den som legger ut appen: Google Drive

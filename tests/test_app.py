@@ -65,10 +65,27 @@ def _pattern(sig, start):
         legs.append({'mode': mode, 'duration': mins * 60, 'aimedStartTime': t.isoformat(), 'expectedStartTime': t.isoformat(),
                      'expectedEndTime': end.isoformat(), 'realtime': False, 'fromPlace': {'name': 'A'}, 'toPlace': {'name': 'B'},
                      'line': {'id': line[0], 'publicCode': line[1], 'transportMode': mode} if line else None,
-                     'fromEstimatedCall': {'destinationDisplay': {'frontText': 'Sentrum'}, 'cancellation': False} if line else None})
+                     'fromEstimatedCall': {'destinationDisplay': {'frontText': 'Sentrum'}, 'cancellation': False} if line else None,
+                     'id': '%s|%s|%d' % (line[0], t.isoformat(), mins) if line else None,
+                     'situations': [{'id': 'SKY:SX:1', 'summary': [{'value': SITS[line[0]], 'language': 'no'}], 'description': []}] if line and line[0] in SITS else []})
         t = end
     walk = sum(m for mode, m, _ in LINES[sig] if mode == 'foot')
     return {'expectedStartTime': start.isoformat(), 'expectedEndTime': t.isoformat(), 'duration': int((t - start).total_seconds()), 'walkTime': walk * 60, 'legs': legs}
+
+
+SITS = {}        # linje-ID → avviksmelding på alle avganger
+LEG_LIVE = {}    # etappe-ID → { delay, cancelled, sit } når den hentes på nytt
+
+
+def fake_leg(leg_id):
+    line, start, mins = leg_id.split('|')
+    live = LEG_LIVE.get(leg_id, {})
+    aimed = datetime.datetime.fromisoformat(start)
+    exp = aimed + datetime.timedelta(minutes=live.get('delay', 0))
+    return {'id': leg_id, 'aimedStartTime': aimed.isoformat(), 'expectedStartTime': exp.isoformat(),
+            'expectedEndTime': (exp + datetime.timedelta(minutes=int(mins))).isoformat(),
+            'fromEstimatedCall': {'cancellation': live.get('cancelled', False)}, 'toEstimatedCall': {'cancellation': False},
+            'situations': [{'id': 'SKY:SX:9', 'summary': [{'value': live['sit'], 'language': 'no'}], 'description': []}] if live.get('sit') else []}
 
 
 def fake_trips(variables):
@@ -290,7 +307,9 @@ class TaktTest(unittest.TestCase):
 
     def setUp(self):
         self.gh = FakeGitHub()
-        self.entur_calls = []
+        self.entur_calls, self.leg_calls = [], []
+        SITS.clear()
+        LEG_LIVE.clear()
         self.ctx = self.browser.new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True,
                                             locale='nb-NO', timezone_id='Europe/Oslo', color_scheme='light')
         self.ctx.route('https://api.entur.io/**', self._entur)
@@ -339,7 +358,12 @@ class TaktTest(unittest.TestCase):
         url = route.request.url
         if 'geocoder' in url:
             return route.fulfill(status=200, content_type='application/json', body=json.dumps(fake_geo(url)))
-        v = json.loads(route.request.post_data)['variables']
+        body = json.loads(route.request.post_data)
+        v = body['variables']
+        if 'leg(id' in body['query']:
+            self.leg_calls.append(v)
+            data = {'l%d' % i: fake_leg(v['id%d' % i]) for i in range(len(v))}
+            return route.fulfill(status=200, content_type='application/json', body=json.dumps({'data': data}))
         self.entur_calls.append(v)
         route.fulfill(status=200, content_type='application/json', body=json.dumps(fake_trips(v)))
 
@@ -527,6 +551,53 @@ class TaktTest(unittest.TestCase):
         self.assertEqual(a[2], {'to': True, 'home': True})
         self.assertIn('valgt reise', self.page.locator('.away').inner_text())
         self.assertEqual(self.page.locator('.trip.picked').count(), 2)
+
+    def test_picked_trip_follows_realtime(self):
+        SITS['SKY:Line:20'] = 'Holdeplass Kronstad er stengt'
+        self.open()
+        self.wait_trips()
+        self.page.click('#trips-to [data-pick="to:0"]')
+        legs = self.js("() => pickOf('2026-10-05', 'to').legs")
+        self.assertEqual(len(legs), 1)
+        self.assertEqual(self.js("() => pickOf('2026-10-05', 'to').walk"), [6, 4])
+        follow = "() => { for (const k in followedAt) delete followedAt[k]; return followPick('2026-10-05', 'to'); }"
+        # 4 min forsinket: gul linje, fraværet følger
+        LEG_LIVE[legs[0]] = {'delay': 4}
+        self.js(follow)
+        self.page.wait_for_function("() => !!(pickOf('2026-10-05', 'to').live)")
+        self.js('() => render()')
+        self.page.wait_for_selector('#trips-to .flag')
+        self.assertEqual(self.page.locator('#trips-to .flag.note').first.inner_text(), 'Reisen du valgte (16E, gå 06:00) er 4 min forsinket. Gå 06:04.')
+        self.assertEqual(self.js("() => hm(awayFor('2026-10-05').leave)"), '06:04')
+        self.assertEqual(self.page.locator('.trip.picked').count(), 1, 'reisen kjennes igjen selv om tidene er endret')
+        # Så forsinket at hun ikke rekker fram: rød linje med forslag
+        LEG_LIVE[legs[0]] = {'delay': 15}
+        self.js(follow)
+        self.page.wait_for_function("() => pickOf('2026-10-05', 'to').live.delay === 15")
+        self.js('() => render()')
+        self.page.wait_for_selector('#trips-to .flag.high')
+        high = self.page.locator('#trips-to .flag.high').inner_text()
+        self.assertIn('er 15 min forsinket og er fram 06:48, etter 06:45.', high)
+        self.assertIn('Neste som passer: gå', high)
+        # Innstilt, med avviksmelding på etappen
+        LEG_LIVE[legs[0]] = {'cancelled': True, 'sit': 'Innstilt på grunn av mannskapsmangel'}
+        self.js(follow)
+        self.page.wait_for_function("() => pickOf('2026-10-05', 'to').live.cancelled")
+        self.js('() => render()')
+        self.page.wait_for_selector('#trips-to .flag.high')
+        flags = self.page.locator('#trips-to .flag').all_inner_texts()
+        self.assertTrue(flags[0].startswith('Reisen du valgte (16E, gå 06:00) er innstilt.'))
+        self.assertIn('Avvik: Innstilt på grunn av mannskapsmangel', flags)
+        # Avvik på andre reiser vises i listen og i detaljene
+        self.page.click('#trips-to [data-more="to"]')
+        row = self.page.locator('#trips-to .trip', has_text='20').first
+        self.assertIn('avvik', row.inner_text())
+        row.locator('.tr-main').click()
+        self.assertIn('Holdeplass Kronstad er stengt', self.sheet().inner_text())
+        # Utenfor tidsvinduet hentes ingenting
+        n = len(self.leg_calls)
+        self.js("() => { for (const k in followedAt) delete followedAt[k]; return followPick('2026-10-06', 'to'); }")
+        self.assertEqual(len(self.leg_calls), n)
 
     def test_set_travel_time_and_night_shift(self):
         self.open()

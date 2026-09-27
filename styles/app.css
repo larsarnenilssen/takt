@@ -88,12 +88,16 @@ h2,h3{margin:0}
 .pick{flex:none;border:none;border-left:1px solid var(--line-soft);background:none;color:var(--accent);font-size:var(--fs-sm);font-weight:650;padding:0 var(--sp-6);cursor:pointer;min-width:4.6em}
 .pick[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 
-/* Hjemme: linjer for avvik, kolonner per barn, rader med etikett */
-.card.home{cursor:pointer}
+/* Linjer for avvik (Hjemme og Reise): rød er viktig, gul er merk */
 .flags{display:flex;flex-direction:column;gap:var(--sp-1)}
 .flag{margin:0;padding:var(--sp-2) var(--sp-4);font-size:var(--fs-md);font-weight:600;line-height:1.35;border-left:3px solid;border-radius:0}
 .flag.high{background:var(--flag-high);color:var(--danger);border-color:var(--danger)}
 .flag.note{background:var(--flag-note);color:var(--warn);border-color:var(--warn)}
+.flag small{display:block;margin-top:var(--sp-1);font-weight:400;font-size:var(--fs-sm);color:var(--ink)}
+.trips .flags{margin-bottom:var(--sp-3)}
+
+/* Hjemme: kolonner per barn, rader med etikett */
+.card.home{cursor:pointer}
 .kg{display:flex;flex-direction:column;margin:var(--sp-4) 0 0;font-variant-numeric:tabular-nums}
 .kg-row{display:flex;gap:var(--sp-2)}
 .kg-k{flex:0 0 5.2em;padding:var(--sp-3) 0;font-size:var(--fs-sm);color:var(--muted);display:flex;flex-direction:column;justify-content:center}
