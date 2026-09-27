@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="nb" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Takt</title>
+<!-- Oppdateres fra --bar i tokens.css når appen starter -->
+<meta name="theme-color" content="#FBF8F4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Takt">
+<meta name="description" content="Turnus, reise og hjemme – dag for dag">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/app.css">
+<!-- Skriptene deler samme globale navnerom og kjøres i denne rekkefølgen etter at siden er lest inn.
+     Nye filer legges også inn i APP_FILES i js/version.js. PDF-importen (js/import/ og vendor/)
+     lastes først når den brukes. -->
+<script src="js/version.js" defer></script>
+<script src="js/text.nb.js" defer></script>
+<script src="js/util.js" defer></script>
+<script src="js/migrate.js" defer></script>
+<script src="js/store.js" defer></script>
+<script src="js/domain/rota.js" defer></script>
+<script src="js/domain/places.js" defer></script>
+<script src="js/domain/travel.js" defer></script>
+<script src="js/domain/items.js" defer></script>
+<script src="js/domain/home.js" defer></script>
+<script src="js/domain/sync.js" defer></script>
+<script src="js/import/grid.js" defer></script>
+<script src="js/import/rotapdf.js" defer></script>
+<script src="js/views/sheet.js" defer></script>
+<script src="js/views/page.js" defer></script>
+<script src="js/views/calendar.js" defer></script>
+<script src="js/views/rota.js" defer></script>
+<script src="js/views/travel.js" defer></script>
+<script src="js/views/items.js" defer></script>
+<script src="js/views/settings.js" defer></script>
+<script src="js/views/swipe.js" defer></script>
+<script src="js/app.js" defer></script>
+</head>
+<body>
+<header class="top" id="top">
+  <div class="wrap top-in">
+    <div class="top-txt">
+      <h1 class="date"><button type="button" class="date-btn" id="date">Takt</button></h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="nav">
+      <button class="icon-btn" id="prev" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="icon-btn" id="next" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="page" aria-live="off"></main>
+<nav class="bottombar" id="bottombar">
+  <div class="bb-in">
+    <button type="button" id="tab-today"></button>
+    <button type="button" id="tab-month"></button>
+    <button type="button" class="bb-add" id="tab-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" id="tab-more"></button>
+  </div>
+</nav>
+<div id="sheet-root" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

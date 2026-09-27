@@ -1,0 +1,7 @@
+# Personlige filer skal aldri inn i det offentlige repoet
+*.pdf
+!tests/fixtures/*.pdf
+*-backup*.json
+takt-*.json
+dogn-*.json
+__pycache__/

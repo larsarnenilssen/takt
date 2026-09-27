@@ -1,0 +1,59 @@
+/* Takt – designverdier. Alle farger, tekststørrelser, avstander og hjørner
+   som brukes i appen, står her. app.css bruker bare disse variablene.
+   Tekststørrelsene er i rem, slik at «Tekststørrelse» i Visning bare
+   skalerer teksten (roten settes til 110 % eller 120 %). */
+:root{
+  /* Flater (lyst tema er standard; mørkt settes av appen, se applyTheme) */
+  --ground:#F5F1EC; --bar:#FBF8F4; --panel:#FFFFFF; --panel-2:#F8F4F0; --field:#FFFFFF;
+  --line:#E4DBD3; --line-soft:#EEE8E2; --field-line:#CFC4BB;
+  /* Tekst */
+  --ink:#2B2227; --muted:#6C5F66; --faint:#A0939A;
+  /* Aksent og tilstander */
+  --accent:#8C4466; --accent-ink:#FFFFFF; --accent-soft:rgba(140,68,102,.09); --accent-line:rgba(140,68,102,.32);
+  --ok:#2F7461; --warn:#A5531C; --danger:#B3261E;
+  /* Vakttyper: dag, kveld, natt, fri og annet (kurs o.l.) */
+  --s-day:#2F7461; --s-eve:#8C4466; --s-night:#4B58A0; --s-off:#A0939A; --s-other:#A06E1F;
+  /* Hjemme: søvn, våken, måltid */
+  --h-sleep:#4B58A0; --h-awake:#2F7461; --h-meal:#A06E1F;
+  /* Skygger og bakgrunn bak ark */
+  --shadow-card:0 1px 2px rgba(60,35,45,.06);
+  --shadow-bar:0 -8px 20px -16px rgba(60,35,45,.5);
+  --shadow-sheet:0 -10px 30px rgba(40,20,30,.18);
+  --shadow-toast:0 10px 24px rgba(40,20,30,.25);
+  --scrim:rgba(30,18,24,.45);
+
+  /* Skrift og tekststørrelser */
+  --sans:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --fs-xs:.75rem;      /* 12 px: merkelapper, små detaljer */
+  --fs-sm:.8125rem;    /* 13 px: hjelpetekst og metadata */
+  --fs-md:.875rem;     /* 14 px: knapper og lister */
+  --fs-base:.9375rem;  /* 15 px: brødtekst */
+  --fs-lg:1rem;        /* 16 px: titler og skjemafelt */
+  --fs-xl:1.25rem;     /* 20 px: datoen i toppen */
+  --fs-xxl:1.75rem;    /* 28 px: vaktkoden */
+
+  /* Avstander */
+  --sp-1:4px; --sp-2:6px; --sp-3:8px; --sp-4:10px; --sp-5:12px; --sp-6:14px; --sp-7:16px; --sp-8:20px; --sp-9:24px;
+  --bar-h:60px;        /* navigasjonslinjen nederst */
+
+  /* Hjørner */
+  --r-sm:8px; --r:12px; --r-lg:16px; --r-pill:999px;
+
+  color-scheme:light;
+}
+/* Mørkt tema */
+:root[data-theme="dark"]{
+  --ground:#151216; --bar:#1B171C; --panel:#221D23; --panel-2:#2A242B; --field:#1A161B;
+  --line:#3B323A; --line-soft:#2F282F; --field-line:#51454E;
+  --ink:#F2EAEE; --muted:#B9AAB2; --faint:#7F7279;
+  --accent:#E3A6C1; --accent-ink:#2A1520; --accent-soft:rgba(227,166,193,.12); --accent-line:rgba(227,166,193,.35);
+  --ok:#8CC8B3; --warn:#E6A774; --danger:#F0938A;
+  --s-day:#8CC8B3; --s-eve:#E3A6C1; --s-night:#A9B3F2; --s-off:#7F7279; --s-other:#E6C27F;
+  --h-sleep:#A9B3F2; --h-awake:#8CC8B3; --h-meal:#E6C27F;
+  --shadow-card:none;
+  --shadow-bar:0 -8px 20px -16px rgba(0,0,0,.9);
+  --shadow-sheet:0 -10px 30px rgba(0,0,0,.5);
+  --shadow-toast:0 10px 24px rgba(0,0,0,.5);
+  --scrim:rgba(0,0,0,.6);
+  color-scheme:dark;
+}
