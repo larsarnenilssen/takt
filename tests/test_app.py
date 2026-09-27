@@ -246,15 +246,28 @@ SEED_JS = """() => commit(null, () => {
 DOGN_FILE = {
     'format': 'dogn-deling', 'v': 1, 'updated': '2026-10-05T05:55:00+02:00', 'kidsWord': 'barna',
     'kids': [{'id': 'a', 'name': 'Per'}, {'id': 'b', 'name': 'Pål'}],
+    'usual': {'a': {'night': 660, 'wakes': 1, 'nap': 100}, 'b': {'night': 650, 'wakes': 1, 'nap': 90}},
     'days': {'2026-10-05': {
         'blocks': [{'start': '05:00', 'end': '06:30', 'title': 'Natt', 'type': 'sleep'},
                    {'start': '06:30', 'end': '07:00', 'title': 'Forberedelser', 'type': 'prep'},
                    {'start': '07:00', 'end': '07:15', 'title': 'Henting', 'type': 'meal'},
                    {'start': '08:15', 'end': '08:45', 'title': 'Frokost', 'type': 'meal', 'meal': 'Havregrøt'}],
         'sleep': [],
+        'nights': {'a': {'asleep': '19:10', 'wake': '05:40', 'net': 630, 'wakes': 1, 'up': 0}, 'b': {'asleep': '19:20', 'wake': '', 'net': 0, 'wakes': 3, 'up': 25}},
+        'health': [{'kid': 'b', 'time': '05:30', 'kind': 'temp', 'value': '38,4'}, {'kid': 'b', 'time': '05:35', 'kind': 'med', 'value': 'paracet'}],
+        'note': {'text': 'Pål sov urolig', 'important': False},
+        'flags': [{'kind': 'fever', 'level': 'high', 'kid': 'b', 'temp': 38.4, 'time': '05:30'}, {'kind': 'med', 'level': 'note', 'kid': 'b', 'time': '05:35', 'what': 'paracet'},
+                  {'kind': 'ukjent', 'level': 'high', 'kid': 'a'}],
+        'lastLog': '05:40',
         'dinner': {'dish': 'Fiskegrateng', 'partnerEats': True},
-        'appts': [{'title': 'Helsestasjon', 'start': '13:00', 'where': 'Bydelshuset'}], 'sick': []},
-        '2026-10-04': {'blocks': [], 'sleep': [{'kid': 'a', 'start': '19:10', 'end': '', 'night': True}, {'kid': 'b', 'start': '19:20', 'end': '', 'night': True}], 'appts': [], 'sick': []}},
+        'appts': [{'title': 'Helsestasjon', 'start': '13:00', 'where': 'Bydelshuset'}], 'sick': ['Pål']},
+        '2026-10-04': {'blocks': [{'start': '12:00', 'end': '13:30', 'title': 'Lur', 'type': 'sleep'}],
+                       'sleep': [{'kid': 'a', 'start': '12:05', 'end': '12:25', 'night': False}, {'kid': 'b', 'start': '12:05', 'end': '13:35', 'night': False},
+                                 {'kid': 'a', 'start': '19:10', 'end': '05:40', 'night': True}, {'kid': 'b', 'start': '19:20', 'end': '', 'night': True}],
+                       'meals': [{'title': 'Lunsj', 'start': '11:00', 'rates': {'a': 'lite', 'b': 'godt'}}, {'title': 'Middag', 'start': '16:30', 'rates': {'a': 'lite', 'b': 'rart'}}],
+                       'did': [{'start': '12:00', 'name': 'Trilletur'}],
+                       'flags': [{'kind': 'nap', 'level': 'note', 'kid': 'a', 'total': 20, 'usual': 100}, {'kind': 'food', 'level': 'bad', 'kid': 'a', 'count': 2}],
+                       'appts': [], 'sick': []}},
     'shop': ['Melk'], 'acks': {},
 }
 
@@ -547,12 +560,34 @@ class TaktTest(unittest.TestCase):
         self.open()
         self.connect()
         self.js('() => { closeSheet(); render(); }')
-        home = self.page.locator('.card.home').inner_text()
-        self.assertIn('Barna sover · siden 19:10', home)
-        self.assertIn('Frokost', home)
+        card = self.page.locator('.card.home')
+        # Linjene øverst: viktig (feber, med medisinen) før merk (beskjeden). Ukjente merknader forkastes.
+        self.assertEqual(card.locator('.flag').all_inner_texts(), ['Pål har feber: 38,4 kl. 05:30 · paracet 05:35', 'Beskjed: Pål sov urolig'])
+        self.assertEqual(card.locator('.flag.high').count(), 1)
+        # Faste rader, én kolonne per barn
+        rows = {r.locator('.kg-k').inner_text(): [c.inner_text() for c in r.locator('.kg-c').all()] for r in card.locator('.kg-row:not(.head)').all()}
+        self.assertEqual(rows['Nå'], ['Våken fra 05:40', 'Sover fra 19:20'])
+        self.assertEqual(rows['Natt'], ['10 t 30', 'sovnet 19:20'])
+        self.assertEqual(rows['Lurer'], ['–', '–'])
+        home = card.inner_text()
+        self.assertIn('06:30Forberedelser', home.replace(' ', '').replace('\n', ''))
         self.assertIn('Fiskegrateng', home)
         self.assertIn('du spiser med', home)
         self.assertIn('Helsestasjon', home)
+        self.assertIn('logget 05:40', home)
+        # Hele dagen: rubrikker, helse og handleliste. I går: kort lur og dårlig matlyst.
+        card.click()
+        sheet = self.sheet()
+        self.assertIn('Pål · temperatur 38,4', sheet.inner_text())
+        self.assertIn('Handleliste · 1', sheet.inner_text())
+        self.page.click('[data-hday="2026-10-04"]')
+        text = self.sheet().inner_text()
+        self.assertIn('Lite lur for Per: 20 min (vanlig 1 t 40)', text)
+        self.assertIn('Per har spist lite til 2 måltider', text)
+        self.assertIn('12:00Lur · Trilletur', text.replace('\n', '').replace('\t', ''))
+        self.assertEqual(self.page.locator('.sheet .lv-note').count() >= 3, True, 'kort lur og to måltider med lite er merket')
+        self.assertNotIn('Handleliste', text)
+        self.js('() => closeSheet()')
         # Et delt gjøremål som er krysset av i Døgn, vises som gjort
         self.js("() => commit('', () => saveItem({ id: 'x1', kind: 'todo', title: 'Ringe', date: '2026-10-05', shared: true }))")
         self.js("() => { dogn.data.acks = { x1: { done: true } }; render(); }")
@@ -920,7 +955,7 @@ class TaktTest(unittest.TestCase):
         texts = self.js('''() => { const out = []; const walk = (o, p) => { for (const [k, v] of Object.entries(o)) {
             if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, p + '.' + k); else out.push(p + '.' + k); } }; walk(T, 'T'); return out; }''')
         dynamic = ['T.rota.step.', 'T.rota.kind.', 'T.items.kind.', 'T.items.titleLabel.', 'T.places.role.', 'T.places.addRole.',
-                   'T.places.walkSpeed.', 'T.profile.themes.', 'T.travel.mode.', 'T.sync.errors.']
+                   'T.places.walkSpeed.', 'T.profile.themes.', 'T.travel.mode.', 'T.sync.errors.', 'T.home.rate.', 'T.home.health.']
         unused_t = [t for t in texts if not any(t.startswith(d) for d in dynamic) and not re.search(re.escape(t) + r'\b', allcode)]
         self.assertEqual(unused_t, [], 'ubrukte tekster')
         # Fargevariabler og andre verdier i tokens.css

@@ -90,6 +90,7 @@ async function runSync(job) {
     scheduleSync();
     render();
     refreshSheet('github');
+    refreshSheet('home');
   }
   return ok;
 }

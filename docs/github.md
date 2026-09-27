@@ -24,7 +24,13 @@ Takt kan bruke det samme private repoet som Døgn. Hver app skriver bare sine eg
 Takt tar da backup (høyst én gang i timen), sender turnus, fravær og delte punkter til Døgn, og henter
 dagen hjemme hvert femte minutt mens appen er åpen. Hvert valg kan slås av. Først når henting fra Døgn er
 slått på, vises kortet **Hjemme** og typen **Handling**; bryteren **Del med …** på punkter vises bare når
-deling er slått på. Nøkkelen lagres bare på telefonen. Merk: Den som eier repoet, kan lese alle filene i
+deling er slått på. Nøkkelen lagres bare på telefonen.
+
+**Hjemme** viser det Døgn har logget, med én kolonne per barn: nå, natt, lurer og mat, og deretter neste
+bolker, middag og avtaler. Det som skiller seg ut (feber, sykdom, medisin, kort natt, lite lur, dårlig matlyst
+og beskjeder merket i Døgn), står øverst i rødt eller gult. Reglene står i Døgn, se `deling.md`. Trykk på kortet
+for hele dagen: søvn med stolpe mot det vanlige, mat, helse, dagsplanen, middag og avtaler, og handlelisten.
+Fanene viser i går, i dag og i morgen. Merk: Den som eier repoet, kan lese alle filene i
 det, også backupen.
 
 Fine-grained-nøkler utløper. Skriv inn utløpsdatoen når du kobler til (den står på GitHub), så varsler Takt

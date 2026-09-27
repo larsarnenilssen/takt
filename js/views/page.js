@@ -133,22 +133,6 @@ function tripRow(date, dir, trip, i, fav) {
     <button type="button" class="pick" data-pick="${dir}:${i}" aria-pressed="${picked}">${picked ? T.travel.picked : T.travel.pick}</button></div>`;
 }
 
-/* ---------- hjemme (fra Døgn) ---------- */
-function homeCard(date) {
-  if (!dognOn()) return '';
-  const hd = homeDay(date);
-  const name = state.settings.dognName || T.home.dognDefault;
-  const head = h`<div class="card-h row-h"><h2>${T.home.title}</h2>${hd && hd.updated ? h`<span class="stamp${hd.old ? ' warn' : ''}">${T.home.updated(fmtStamp(hd.updated))}</span>` : ''}</div>`;
-  if (!hd) return h`<section class="card home">${head}<p class="hint">${T.home.noData(name)}</p></section>`;
-  if (hd.empty) return h`<section class="card home">${head}<p class="hint">${T.home.noDay}</p></section>`;
-  return h`<section class="card home" aria-label="${T.home.title}">${head}
-    ${hd.sick.length ? h`<p class="alert">${T.home.sick(joinNames(hd.sick))}</p>` : ''}
-    ${hd.status ? h`<p class="status">${hd.status}</p>` : ''}
-    ${hd.next.length ? h`<ul class="next">${hd.next.map(b => h`<li class="ty-${b.type}"><span class="t">${b.start}</span><span>${b.title}${b.meal ? h`<span class="m"> · ${b.meal}</span>` : ''}</span></li>`)}</ul>` : ''}
-    ${hd.dinner && hd.dinner.dish ? h`<p class="dinner"><span class="k">${T.home.dinner}</span> ${hd.dinner.dish}<span class="m"> · ${hd.dinner.partnerEats ? T.home.youEat : T.home.youDont}</span></p>` : ''}
-    ${hd.appts.map(a => h`<p class="appt"><span class="t">${a.start || '–'}</span> ${a.title}${a.where ? h`<span class="m"> · ${a.where}</span>` : ''}</p>`)}</section>`;
-}
-
 /* ---------- notater, gjøremål, avtaler og handling ---------- */
 function itemsCard(date) {
   const list = itemsFor(date);

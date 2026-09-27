@@ -15,6 +15,9 @@
   --s-day:#2F7461; --s-eve:#8C4466; --s-night:#4B58A0; --s-off:#A0939A; --s-other:#A06E1F;
   /* Hjemme: søvn, våken, måltid */
   --h-sleep:#4B58A0; --h-awake:#2F7461; --h-meal:#A06E1F;
+  /* Kolonnene for barna i Hjemme (inntil tre, gjentas), og linjene for avvik: viktig (rød) og merk (gul) */
+  --kid-0:#E6F1EC; --kid-0-ink:#245C4D; --kid-1:#ECEBF6; --kid-1-ink:#3F4785; --kid-2:#F5EEE1; --kid-2-ink:#7A5418;
+  --flag-high:#FBE9E7; --flag-note:#FBF0E3; --bar-track:#E9E1DA;
   /* Skygger og bakgrunn bak ark */
   --shadow-card:0 1px 2px rgba(60,35,45,.06);
   --shadow-bar:0 -8px 20px -16px rgba(60,35,45,.5);
@@ -50,6 +53,8 @@
   --ok:#8CC8B3; --warn:#E6A774; --danger:#F0938A;
   --s-day:#8CC8B3; --s-eve:#E3A6C1; --s-night:#A9B3F2; --s-off:#7F7279; --s-other:#E6C27F;
   --h-sleep:#A9B3F2; --h-awake:#8CC8B3; --h-meal:#E6C27F;
+  --kid-0:#1E2C28; --kid-0-ink:#A7D8C6; --kid-1:#25263A; --kid-1-ink:#C0C6F4; --kid-2:#302819; --kid-2-ink:#EACB91;
+  --flag-high:rgba(240,147,138,.14); --flag-note:rgba(230,167,116,.14); --bar-track:#3B323A;
   --shadow-card:none;
   --shadow-bar:0 -8px 20px -16px rgba(0,0,0,.9);
   --shadow-sheet:0 -10px 30px rgba(0,0,0,.5);

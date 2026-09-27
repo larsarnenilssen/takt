@@ -27,6 +27,8 @@ const fmtDateShort = s => { const d = parseISO(s); return d.getDate() + '. ' + T
 const wdShort = n => T.date.wdShort[n - 1];
 const isoWeek = s => { const d = parseISO(s); d.setDate(d.getDate() + 4 - (d.getDay() || 7)); return Math.ceil(((d - new Date(d.getFullYear(), 0, 1)) / 86400000 + 1) / 7); };
 const fmtDur = m => m < 60 ? m + ' ' + T.unit.min : (m % 60 ? Math.floor(m / 60) + ' ' + T.unit.hour + ' ' + (m % 60) + ' ' + T.unit.min : (m / 60) + ' ' + T.unit.hour);
+/* Kort: «55 min», «7 t 20», «11 t» */
+const fmtDurShort = m => m < 60 ? m + ' ' + T.unit.min : Math.floor(m / 60) + ' ' + T.unit.hour + (m % 60 ? ' ' + pad(m % 60) : '');
 /* «i dag 14:05», «i går 22:10» eller «3. okt. 08:00» */
 function fmtStamp(isoStr) {
   const d = new Date(isoStr), day = iso(d), t = todayISO();

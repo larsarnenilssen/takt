@@ -48,6 +48,7 @@ $('#page').addEventListener('click', e => {
     case 'drive-login': googleLogin('backup', ['drive']); break;
     case 'cal-login': googleLogin('calendar', ['cal']); break;
     case 'github': openSyncSheet(null); break;
+    case 'home': openHomeSheet(view); break;
   }
 });
 

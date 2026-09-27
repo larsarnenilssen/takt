@@ -55,13 +55,21 @@ Alle datoer skrives som `ÅÅÅÅ-MM-DD` og alle klokkeslett som `TT:MM`, i loka
 {
   "format": "dogn-deling", "v": 1, "updated": "2026-10-05T05:55:00.000Z",
   "kidsWord": "barna", "kids": [{ "id": "a", "name": "Per" }, { "id": "b", "name": "Pål" }],
+  "usual": { "a": { "night": 690, "wakes": 1, "nap": 110 }, "b": { "night": 660, "wakes": 1, "nap": 95 } },
   "days": {
     "2026-10-05": {
       "blocks": [{ "start": "08:15", "end": "08:45", "title": "Frokost", "type": "meal", "meal": "Havregrøt" }],
       "sleep": [{ "kid": "a", "start": "09:20", "end": "", "night": false }],
+      "nights": { "b": { "asleep": "21:00", "wake": "04:30", "net": 450, "wakes": 5, "up": 0 } },
+      "meals": [{ "title": "Lunsj", "start": "11:30", "rates": { "a": "godt", "b": "lite" } }],
+      "did": [{ "start": "10:30", "name": "Lekeplassen" }],
+      "health": [{ "kid": "b", "time": "13:50", "kind": "temp", "value": "38,6" }],
+      "note": { "text": "Falt på lekeplassen, går fint nå.", "important": false },
+      "flags": [{ "kind": "fever", "level": "high", "kid": "b", "temp": 38.6, "time": "13:50" }],
+      "lastLog": "13:50",
       "dinner": { "dish": "Fiskegrateng", "partnerEats": true },
       "appts": [{ "title": "Helsestasjon", "start": "13:00", "where": "Bydelshuset" }],
-      "sick": []
+      "sick": ["Pål"]
     }
   },
   "shop": ["Melk"],
@@ -69,11 +77,31 @@ Alle datoer skrives som `ÅÅÅÅ-MM-DD` og alle klokkeslett som `TT:MM`, i loka
 }
 ```
 
+- `usual`: det vanlige per barn, snittet de siste 14 dagene: søvn om natten (`night`, minutter uten
+  tiden våken), oppvåkninger (`wakes`) og lurer i alt (`nap`, minutter). `null` når færre enn 7 er logget.
 - `days`: i går, i dag og i morgen.
 - `blocks`: dagens bolker med tidene slik de står nå (etter forskyvning), `type` som i Døgn
   (`prep`, `meal`, `sleep`, `awake`, `routine`), og `meal` med retten der det finnes.
 - `sleep`: lurer og natt som er logget. `end` er tom så lenge barnet sover. `night: true`
   er nattesøvnen som starter den kvelden.
+- `nights`: natten som slutter denne dagen, per barn: sovnet, våknet, søvn i minutter (`net`,
+  0 før «våknet» er logget), oppvåkninger og minutter våken.
+- `meals`: måltider som er vurdert, med `godt`, `middels` eller `lite` per barn.
+- `did`: aktiviteter som er valgt for dagen.
+- `health`: temperatur (`temp`), medisin (`med`), symptom (`sym`) og annet (`other`), med klokkeslett.
+- `note`: notatet i dagsloggen, bare når det er merket «Vis i Takt» (`important: false`) eller
+  «Viktig» (`important: true`). Ellers `null`.
+- `flags`: det som skiller seg ut, viktigst først. `level` er `high` (rød) eller `note` (gul).
+  Reglene står i Døgn (`dayFlags` i `js/domain/takt.js`); Takt viser dem bare.
+  - `fever` (`high`): temperatur fra 38,0, med `temp` og `time` for den høyeste.
+  - `sick` (`high`): merket syk uten feber.
+  - `med` (`note`): siste medisin, med `time` og `what`.
+  - `night`: søvn under 80 % av det vanlige (`high` under 60 %), minst 3 flere oppvåkninger
+    enn vanlig, eller minst en time våken. Med `net`, `wakes` og `usual`.
+  - `nap` (`note`): lurene til sammen under 60 % av det vanlige når lurtiden er over, med `total` og `usual`.
+  - `food` (`note`): minst to måltider med «lite», med `count`.
+- `lastLog`: siste klokkeslett noe ble logget den dagen (søvn, natt, helse), eller tom.
 - `dinner.partnerEats`: om Døgn regner med at hun er hjemme til middag.
+- `sick`: navnene på barn som er merket syke.
 - `shop`: varer som står på handlelisten og ikke er kjøpt.
 - `acks`: punkter fra Takt som er krysset av i Døgn.

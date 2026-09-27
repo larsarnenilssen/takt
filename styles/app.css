@@ -88,15 +88,50 @@ h2,h3{margin:0}
 .pick{flex:none;border:none;border-left:1px solid var(--line-soft);background:none;color:var(--accent);font-size:var(--fs-sm);font-weight:650;padding:0 var(--sp-6);cursor:pointer;min-width:4.6em}
 .pick[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 
-/* Hjemme */
-.home .status{margin:0 0 var(--sp-3);font-size:var(--fs-lg);font-weight:650}
-.home .alert{margin:0 0 var(--sp-3);color:var(--danger);font-weight:600}
-.next{list-style:none;margin:0 0 var(--sp-3);padding:0;display:flex;flex-direction:column;gap:2px}
-.next li{display:flex;gap:var(--sp-4);font-size:var(--fs-md)}
-.next .t,.home .appt .t{font-weight:650;min-width:3em;color:var(--muted)}
-.next li.ty-sleep .t{color:var(--h-sleep)} .next li.ty-meal .t{color:var(--h-meal)} .next li.ty-awake .t{color:var(--h-awake)}
-.home .dinner,.home .appt{margin:var(--sp-2) 0 0;font-size:var(--fs-md)}
-.home .dinner .k{font-weight:650}
+/* Hjemme: linjer for avvik, kolonner per barn, rader med etikett */
+.card.home{cursor:pointer}
+.flags{display:flex;flex-direction:column;gap:var(--sp-1)}
+.flag{margin:0;padding:var(--sp-2) var(--sp-4);font-size:var(--fs-md);font-weight:600;line-height:1.35;border-left:3px solid;border-radius:0}
+.flag.high{background:var(--flag-high);color:var(--danger);border-color:var(--danger)}
+.flag.note{background:var(--flag-note);color:var(--warn);border-color:var(--warn)}
+.kg{display:flex;flex-direction:column;margin:var(--sp-4) 0 0;font-variant-numeric:tabular-nums}
+.kg-row{display:flex;gap:var(--sp-2)}
+.kg-k{flex:0 0 5.2em;padding:var(--sp-3) 0;font-size:var(--fs-sm);color:var(--muted);display:flex;flex-direction:column;justify-content:center}
+.kg-k small{font-size:var(--fs-xs);color:var(--faint)}
+.kg-c{flex:1 1 0;min-width:0;padding:var(--sp-3) var(--sp-4);font-size:var(--fs-md);border-bottom:1px solid var(--line-soft);overflow-wrap:anywhere;display:flex;flex-direction:column;justify-content:center}
+.kg-row.head .kg-c{border-radius:var(--r-sm) var(--r-sm) 0 0;border-bottom:none;font-size:var(--fs-sm);font-weight:650;padding-bottom:var(--sp-1)}
+.kg-row:last-child .kg-c{border-radius:0 0 var(--r-sm) var(--r-sm);border-bottom:none}
+.kg-row:not(.head):not(:last-child) .kg-k{border-bottom:1px solid var(--line-soft)}
+.tint-0{background:var(--kid-0)} .kg-row.head .tint-0{color:var(--kid-0-ink)}
+.tint-1{background:var(--kid-1)} .kg-row.head .tint-1{color:var(--kid-1-ink)}
+.tint-2{background:var(--kid-2)} .kg-row.head .tint-2{color:var(--kid-2-ink)}
+.kg-c b,.hr b{font-size:var(--fs-lg);font-weight:650}
+.kg-c small,.hr-v small{font-size:var(--fs-xs);color:var(--muted);font-weight:400}
+.kg-c .none{color:var(--faint)}
+.kg-c.lv-note,.kg-c.lv-note small{color:var(--warn)} .kg-c.lv-high,.kg-c.lv-high small{color:var(--danger)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:var(--sp-2);vertical-align:2px}
+.bar{display:block;position:relative;height:5px;margin-top:var(--sp-2);border-radius:3px;background:var(--bar-track)}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--muted)}
+.lv-note .bar i{background:var(--warn)} .lv-high .bar i{background:var(--danger)}
+.bar s{position:absolute;top:-3px;width:2px;height:11px;background:var(--ink)}
+.hrows{display:flex;flex-direction:column;margin:var(--sp-4) 0 0}
+.hr{display:flex;gap:var(--sp-2);border-bottom:1px solid var(--line-soft)}
+.hr:last-child{border-bottom:none}
+.hr-k{flex:0 0 5.2em;padding:var(--sp-3) 0;font-size:var(--fs-sm);color:var(--muted)}
+.hr-v{flex:1;min-width:0;padding:var(--sp-3) 0;font-size:var(--fs-md)}
+.hr .t{font-weight:650;font-variant-numeric:tabular-nums;color:var(--ink);margin-right:var(--sp-3)}
+.hr-k .t{margin:0}
+.hr.ty-sleep .t{color:var(--h-sleep)} .hr.ty-meal .t{color:var(--h-meal)} .hr.ty-awake .t{color:var(--h-awake)}
+.hr.past,.hr.past .t{color:var(--faint)}
+.home-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-4)}
+.home-foot .stamp{margin:0}
+.home-foot .btn.link{align-self:center}
+.sheet:has(.homeday){height:92vh;height:92dvh}
+.rub h3{margin:var(--sp-2) 0 0;padding-bottom:var(--sp-2);font-size:var(--fs-md);font-weight:650;border-bottom:1.5px solid var(--line)}
+.rub .kg,.rub .hrows{margin-top:var(--sp-3)}
+.rub .hint{margin-top:var(--sp-3)}
+.chips{list-style:none;margin:var(--sp-4) 0 0;padding:0;display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.chips li{padding:var(--sp-1) var(--sp-4);border:1px solid var(--line);border-radius:var(--r-pill);font-size:var(--fs-md)}
 
 /* Forklaringer i ark */
 .sh-body>*{flex-shrink:0}
