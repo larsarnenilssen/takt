@@ -30,7 +30,11 @@ deling er slått på. Nøkkelen lagres bare på telefonen.
 bolker, middag og avtaler. Det som skiller seg ut (feber, sykdom, medisin, kort natt, lite lur, dårlig matlyst
 og beskjeder merket i Døgn), står øverst i rødt eller gult. Reglene står i Døgn, se `deling.md`. Trykk på kortet
 for hele dagen: søvn med stolpe mot det vanlige, mat, helse, dagsplanen, middag og avtaler, og handlelisten.
-Fanene viser i går, i dag og i morgen. Merk: Den som eier repoet, kan lese alle filene i
+Fanene viser i går, i dag og i morgen.
+
+Avtalene i Døgn vises til orientering: med et lite hus i kalenderen (Måned), i listen for måneden med
+«… · til orientering», og under **Hjemme** på dagen. De blir ikke punkter i Takt og kan ikke krysses av.
+I Døgn kan en avtale holdes utenfor med bryteren **Vis hos … i Takt**. Merk: Den som eier repoet, kan lese alle filene i
 det, også backupen.
 
 Fine-grained-nøkler utløper. Skriv inn utløpsdatoen når du kobler til (den står på GitHub), så varsler Takt

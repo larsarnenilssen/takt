@@ -67,7 +67,18 @@ function cleanDogn(o) {
     updated: typeof o.updated === 'string' && !isNaN(Date.parse(o.updated)) ? o.updated : '',
     kids: arr(o.kids).map(obj).map(k => ({ id: str(k.id, 20), name: str(k.name, 40) })).filter(k => k.id),
     usual, days, shop: arr(o.shop).map(s => str(s, 120)).filter(Boolean).slice(0, 100), acks,
+    // Avtalene i Døgn (fra Døgn 2.9.4). null: eldre Døgn, da brukes avtalene i dagene.
+    appts: Array.isArray(o.appts) ? o.appts.map(obj).filter(a => isDate(a.date) && str(a.title)).slice(0, 300).map(a => ({
+      id: str(a.id, 40), date: a.date, start: isTime(a.start) ? a.start : '', end: isTime(a.end) ? a.end : '', title: str(a.title, 120), where: str(a.where, 120),
+    })) : null,
   };
+}
+/* Avtalene i Døgn, til orientering: [{ date, start, end, title, where }] sortert etter tid */
+function dognAppts(from, to) {
+  if (!dognOn() || !dogn.data) return [];
+  const D = dogn.data;
+  const all = D.appts || Object.entries(D.days).flatMap(([date, r]) => r.appts.map(a => ({ ...a, date, end: '' })));
+  return all.filter(a => a.date >= from && a.date <= to).sort((a, b) => (a.date + (a.start || '99')).localeCompare(b.date + (b.start || '99')));
 }
 
 /* ---------- fra filen til det som vises ---------- */
@@ -113,7 +124,7 @@ function homeDay(date) {
   const rec = dogn.data.days[date];
   const updated = dogn.data.updated;
   const old = updated ? Date.now() - Date.parse(updated) > DOGN_STALE : true;
-  if (!rec) return { empty: true, updated, old };
+  if (!rec) return { empty: true, appts: dognAppts(date, date), updated, old };
   const isToday = date === todayISO(), now = nowMin();
   const asleep = isToday ? sleepingNow(date, now) : {};
   const kids = dogn.data.kids.map((k, i) => {
@@ -131,5 +142,5 @@ function homeDay(date) {
   const blocks = rec.blocks.map(b => ({ ...b, past: isToday && toMin(b.end || b.start) <= now, did: (rec.did.find(a => a.start === b.start) || {}).name || '' }));
   const next = isToday ? blocks.filter(b => toMin(b.start) > now).slice(0, 2) : [];
   return { date, isToday, lines: flagLines(rec), kids, blocks, next, meals: rec.meals, health: rec.health, note: rec.note,
-    dinner: rec.dinner, appts: rec.appts, lastLog: rec.lastLog, updated, old };
+    dinner: rec.dinner, appts: dognAppts(date, date), lastLog: rec.lastLog, updated, old };
 }

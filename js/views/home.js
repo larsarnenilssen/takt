@@ -27,6 +27,8 @@ const nowCell = k => k.now.asleep ? h`${T.home.asleep} <small>${T.home.from(k.no
 const nightCell = k => !k.night ? dash : k.night.net ? durHtml(k.night.net) : k.night.asleep ? h`<small>${T.home.asleepAt(k.night.asleep)}</small>` : dash;
 const napsCell = k => k.naps.total ? durHtml(k.naps.total) : k.naps.list.some(e => !e.end) ? h`<small>${T.home.ongoing}</small>` : dash;
 const foodCell = k => k.food.rate ? cap(T.home.rate[k.food.rate]) : dash;
+const apptTime = a => a.start ? a.start + (a.end ? '–' + a.end : '') : '–';
+const apptRows = appts => appts.map((a, i) => [i ? '' : T.home.appts, h`<span class="t">${apptTime(a)}</span>${a.title}${a.where ? h`<small> · ${a.where}</small>` : ''}`]);
 const dinnerText = d => h`${d.dish}<small> · ${d.partnerEats ? T.home.youEat : T.home.youDont}</small>`;
 const stamp = hd => h`<span class="stamp${hd.old ? ' warn' : ''}">${hd.lastLog ? T.home.logged(hd.lastLog) : hd.isToday ? T.home.noLog : ''}${hd.lastLog || hd.isToday ? ' · ' : ''}${hd.updated ? T.home.updated(fmtStamp(hd.updated)) : ''}</span>`;
 
@@ -36,7 +38,8 @@ function homeCard(date) {
   const hd = homeDay(date);
   const head = h`<div class="card-h row-h"><h2>${T.home.title}</h2></div>`;
   if (!hd) return h`<section class="card home">${head}<p class="hint">${T.home.noData(state.settings.dognName || T.home.dognDefault)}</p></section>`;
-  if (hd.empty) return h`<section class="card home">${head}<p class="hint">${T.home.noDay}</p></section>`;
+  // Dager uten plan fra Døgn: bare avtalene, til orientering
+  if (hd.empty) return h`<section class="card home">${head}${hd.appts.length ? hrows(apptRows(hd.appts)) : h`<p class="hint">${T.home.noDay}</p>`}</section>`;
   const logged = hd.kids.some(k => k.night || k.naps.list.length || k.food.rate);
   const rows = [
     ...(hd.isToday ? [[T.home.now, nowCell]] : []),
@@ -47,7 +50,7 @@ function homeCard(date) {
   const fam = [
     ...hd.next.map((b, i) => [i ? '' : T.home.next, h`<span class="t">${b.start}</span>${b.title}`, false, b.type]),
     ...(hd.dinner && hd.dinner.dish ? [[T.home.dinner, dinnerText(hd.dinner)]] : []),
-    ...hd.appts.map((a, i) => [i ? '' : T.home.appts, h`<span class="t">${a.start || '–'}</span>${a.title}`]),
+    ...apptRows(hd.appts),
   ];
   return h`<section class="card home" data-act="home" aria-label="${T.home.title}">${head}
     ${flagLinesHtml(hd.lines)}
@@ -96,7 +99,7 @@ function homeDayHtml(hd) {
   const day = hd.blocks.length ? hrows(hd.blocks.map(b => [h`<span class="t">${b.start}</span>`, h`${b.title}${b.did || b.meal ? h`<small> · ${b.did || b.meal}</small>` : ''}`, b.past, b.type])) : '';
   const din = [
     ...(hd.dinner && hd.dinner.dish ? [[T.home.dinner, dinnerText(hd.dinner)]] : []),
-    ...hd.appts.map(a => [h`<span class="t">${a.start || '–'}</span>`, h`${a.title}${a.where ? h`<small> · ${a.where}</small>` : ''}`]),
+    ...hd.appts.map(a => [h`<span class="t">${a.start || '–'}</span>`, h`${a.title}${a.end || a.where ? h`<small>${a.end ? ' · ' + T.home.until(a.end) : ''}${a.where ? ' · ' + a.where : ''}</small>` : ''}`]),
   ];
   const shop = hd.isToday && dogn.data.shop.length ? h`<ul class="chips">${dogn.data.shop.map(s => h`<li>${s}</li>`)}</ul>` : '';
   return h`${flagLinesHtml(hd.lines)}

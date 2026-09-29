@@ -287,6 +287,9 @@ DOGN_FILE = {
                        'did': [{'start': '12:00', 'name': 'Trilletur'}],
                        'flags': [{'kind': 'nap', 'level': 'note', 'kid': 'a', 'total': 20, 'usual': 100}, {'kind': 'food', 'level': 'bad', 'kid': 'a', 'count': 2}],
                        'appts': [], 'sick': []}},
+    'appts': [{'id': 'ap-1', 'date': '2026-10-05', 'start': '13:00', 'end': '13:45', 'title': 'Helsestasjon', 'where': 'Bydelshuset'},
+              {'id': 'ap-2', 'date': '2026-10-20', 'start': '08:30', 'end': '', 'title': 'Tannlege', 'where': ''},
+              {'id': 'x', 'date': 'i morgen', 'title': 'Ugyldig'}],
     'shop': ['Melk'], 'acks': {},
 }
 
@@ -704,6 +707,36 @@ class TaktTest(unittest.TestCase):
         self.js("() => { dogn.data.acks = { x1: { done: true } }; render(); }")
         self.assertIn('gjort i Døgn', self.page.locator('.card.items').inner_text())
 
+    def test_dogn_appointments_in_calendar(self):
+        self.gh.files['dogn-deling.json'] = json.dumps(DOGN_FILE)
+        self.open()
+        self.connect()
+        self.js("() => { closeSheet(); commit(null, () => saveItem({ kind: 'todo', title: 'Levere skjema', date: '2026-10-14' })); render(); }")
+        self.page.click('#tab-month')
+        cell = lambda d: self.page.locator(f'.cal-d[data-day="{d}"]')
+        self.assertEqual(cell('2026-10-20').locator('.homem').count(), 1, 'eget merke for avtaler i Døgn')
+        self.assertEqual(cell('2026-10-14').locator('.homem').count(), 0)
+        self.assertEqual(cell('2026-10-14').locator('.dotm').count(), 1)
+        rows = self.page.locator('.sheet .rows .row').all_inner_texts()
+        flat = [r.replace('\n', ' ') for r in rows]
+        self.assertEqual(len(flat), 3)
+        self.assertIn('13:00 Helsestasjon', flat[0])
+        self.assertIn('Ola · til orientering', flat[0])
+        self.assertIn('Levere skjema', flat[1])
+        self.assertIn('Gjøremål', flat[1])
+        self.assertIn('08:30 Tannlege', flat[2])
+        # Trykk går til dagen; Hjemme viser avtalen selv om Døgn ikke har plan for dagen
+        self.page.locator('.sheet .rows .row').nth(2).click()
+        self.assertEqual(self.js('() => view'), '2026-10-20')
+        home = self.page.locator('.card.home').inner_text()
+        self.assertIn('Tannlege', home)
+        self.assertNotIn('Døgn har ingen plan', home)
+        # Avtalen blir ikke et punkt hos henne
+        self.assertEqual(self.js("() => state.items.filter(x => x.title === 'Tannlege').length"), 0)
+        # Med tider: 13:00–13:45 på kortet
+        self.js("() => goTo('2026-10-05')")
+        self.assertIn('13:00–13:45', self.page.locator('.card.home').inner_text())
+
     def test_backup_restore_from_github(self):
         self.open()
         self.js("() => commit('', () => saveItem({ kind: 'note', title: 'Husk', date: '2026-10-05' }))")
@@ -949,6 +982,9 @@ class TaktTest(unittest.TestCase):
             self.js('() => openMenu()')
             self.page.click(f'[data-nav="{nav}"]')
             texts.append(self.sheet().inner_text())
+        self.js('() => openCalendarSheet()')
+        self.assertEqual(self.page.locator('.sheet .homem').count(), 0, 'ingen avtaler fra Døgn i kalenderen')
+        texts.append(self.sheet().inner_text())
         for word in ['Døgn', 'GitHub', 'Handl', 'hjemme', 'Lars']:
             self.assertFalse(any(word in t for t in texts), word)
         # Med ?github i adressen (for dem som bruker Døgn) kommer valget fram og huskes

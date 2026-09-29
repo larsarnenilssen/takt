@@ -19,7 +19,8 @@ inn, lagres på telefonen din. Andre som åpner samme adresse, får sin egen, to
   slutt. Favorittlinjer (for eksempel 16E, 20 eller 1 + 5) vises først. **Velg** en reise
   for dagen, så brukes den til å regne ut når du er borte.
 - **Notater og gjøremål:** gjøremål, avtaler og notater, for en dag eller til de er gjort.
-- **Måned:** turnusen i kalender, med ukenummer.
+- **Måned:** turnusen i kalender, med ukenummer, og en liste under kalenderen med det som skjer i måneden: egne
+  avtaler, gjøremål og notater med dato. Trykk på en linje for å gå til dagen.
 - **Kalender** (valgfritt): vaktene, og avtaler som er merket for det, i en egen kalender i Google-kalenderen,
   eller som kalenderfil (.ics).
 

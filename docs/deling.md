@@ -72,6 +72,7 @@ Alle datoer skrives som `ÅÅÅÅ-MM-DD` og alle klokkeslett som `TT:MM`, i loka
       "sick": ["Pål"]
     }
   },
+  "appts": [{ "id": "ap-1", "date": "2026-10-08", "start": "13:00", "end": "13:45", "title": "Helsestasjon", "where": "Bydelshuset" }],
   "shop": ["Melk"],
   "acks": { "k3j9x0a1": { "done": true } }
 }
@@ -103,5 +104,8 @@ Alle datoer skrives som `ÅÅÅÅ-MM-DD` og alle klokkeslett som `TT:MM`, i loka
 - `lastLog`: siste klokkeslett noe ble logget den dagen (søvn, natt, helse), eller tom.
 - `dinner.partnerEats`: om Døgn regner med at hun er hjemme til middag.
 - `sick`: navnene på barn som er merket syke.
+- `appts`: avtalene i Døgn fra en uke tilbake til tre måneder fram, uten dem som er merket «ikke i Takt».
+  `end` er tom når avtalen ikke har lengde. Takt viser dem til orientering: i kalenderen (med eget merke),
+  i listen for måneden og under Hjemme. De blir ikke punkter i Takt. Notatet sendes ikke.
 - `shop`: varer som står på handlelisten og ikke er kjøpt.
 - `acks`: punkter fra Takt som er krysset av i Døgn.

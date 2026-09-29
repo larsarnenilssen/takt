@@ -105,7 +105,7 @@ const T = {
   home: {
     title: 'Hjemme', dognDefault: 'Døgn',
     now: 'Nå', night: 'Natt', naps: 'Lurer', food: 'Mat', next: 'Neste', dinner: 'Middag', appts: 'Avtale',
-    asleep: 'Sover', awake: 'Våken', from: t => 'fra ' + t, asleepAt: t => 'sovnet ' + t, ongoing: 'pågår',
+    asleep: 'Sover', awake: 'Våken', from: t => 'fra ' + t, until: t => 'til ' + t, asleepAt: t => 'sovnet ' + t, ongoing: 'pågår',
     youEat: 'du spiser med', youDont: 'uten deg',
     rate: { godt: 'godt', middels: 'middels', lite: 'lite' },
     health: { temp: 'temperatur', med: 'medisin:', sym: 'symptom:', other: '' },
@@ -144,7 +144,9 @@ const T = {
     checkAria: t => 'Gjort: ' + t,
   },
 
-  cal: { prev: 'Forrige måned', next: 'Neste måned', today: 'I dag', wk: 'u.', hint: 'Fargen viser vakten: dag, kveld, natt eller fri. Prikk: notat, gjøremål eller avtale.' },
+  cal: { prev: 'Forrige måned', next: 'Neste måned', today: 'I dag', wk: 'u.', hint: 'Fargen viser vakten: dag, kveld, natt eller fri.',
+    legendOwn: 'Notat, gjøremål eller avtale', legendDogn: n => 'Avtale hos ' + n, hasDogn: ', avtale i Døgn',
+    inMonth: m => 'I ' + m, fromDogn: n => n + ' · til orientering' },
 
   rota: {
     title: 'Turnus', intro: 'Importer turnusen fra MinGat eller som PDF, eller skriv den inn uke for uke. Ved import viser Takt hva den fant, før noe lagres.',
